@@ -36,7 +36,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed bottom-0 left-0 top-14 z-30 flex w-60 flex-col border-r border-border bg-background">
+    <aside className="fixed bottom-0 left-0 top-14 z-30 flex w-60 flex-col border-r border-border bg-background print:hidden">
       <nav className="flex flex-col gap-0.5 p-3">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = isActive(pathname, href);

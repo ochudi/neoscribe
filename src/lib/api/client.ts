@@ -3,7 +3,7 @@ import {
   getMockModels,
   mockExtraction,
   mockModelHealth,
-  type ExtractionResponse,
+  type ExtractionResult,
   type Model,
   type ModelHealth,
 } from "@/lib/api/mocks";
@@ -49,9 +49,13 @@ export async function getModelHealth(id: string): Promise<ModelHealth> {
 export async function extractWithModel(
   id: string,
   payload: ExtractionPayload
-): Promise<ExtractionResponse> {
-  if (USE_MOCKS) return mockExtraction(id);
-  return request<ExtractionResponse>(
+): Promise<ExtractionResult> {
+  if (USE_MOCKS) {
+    const delay = 1500 + Math.random() * 1500;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    return mockExtraction(id);
+  }
+  return request<ExtractionResult>(
     `/v1/models/${encodeURIComponent(id)}/extract`,
     {
       method: "POST",

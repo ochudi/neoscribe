@@ -1,4 +1,7 @@
-import type { ExtractionCategory } from "@/lib/constants";
+import {
+  EXTRACTION_CATEGORIES,
+  type ExtractionCategory,
+} from "@/lib/constants";
 
 export type ModelLocation = "cloud" | "edge";
 export type ModelStatus = "online" | "loading" | "offline";
@@ -24,18 +27,21 @@ export interface ModelHealth {
   lastCheckedAt: string;
 }
 
-export interface ExtractionResult {
-  modelId: string;
-  category: ExtractionCategory;
+export type ExtractionMatchStatus = "matched" | "no_match";
+
+export interface ExtractionItem {
+  id: string;
   text: string;
-  confidence: number;
+  matchStatus: ExtractionMatchStatus;
+  matchedCode?: string;
+  confidence?: number;
 }
 
-export interface ExtractionResponse {
+export interface ExtractionResult {
   modelId: string;
   startedAt: string;
   completedAt: string;
-  results: ExtractionResult[];
+  results: Record<ExtractionCategory, ExtractionItem[]>;
 }
 
 const BASE_MODELS: Omit<Model, "lastCheckedAt">[] = [
@@ -109,32 +115,110 @@ export function mockModelHealth(id: string): ModelHealth {
   };
 }
 
-export function mockExtraction(id: string): ExtractionResponse {
+type FixtureItem = Omit<ExtractionItem, "id">;
+
+const EXTRACTION_FIXTURES: Record<ExtractionCategory, FixtureItem[]> = {
+  complaints: [
+    {
+      text: "Productive cough for 3 days",
+      matchStatus: "matched",
+      matchedCode: "ICD10:R05.1",
+      confidence: 0.94,
+    },
+    {
+      text: "Low-grade fever",
+      matchStatus: "matched",
+      matchedCode: "ICD10:R50.9",
+      confidence: 0.88,
+    },
+    {
+      text: "Mild dyspnea on exertion",
+      matchStatus: "no_match",
+      confidence: 0.62,
+    },
+  ],
+  symptoms: [
+    {
+      text: "Cough",
+      matchStatus: "matched",
+      matchedCode: "SNOMED:49727002",
+      confidence: 0.97,
+    },
+    {
+      text: "Fatigue",
+      matchStatus: "matched",
+      matchedCode: "SNOMED:84229001",
+      confidence: 0.9,
+    },
+    {
+      text: "Intermittent chills",
+      matchStatus: "matched",
+      matchedCode: "SNOMED:43724002",
+      confidence: 0.83,
+    },
+    {
+      text: "Greenish sputum",
+      matchStatus: "no_match",
+      confidence: 0.55,
+    },
+  ],
+  diagnoses: [
+    {
+      text: "Acute bronchitis",
+      matchStatus: "matched",
+      matchedCode: "ICD10:J20.9",
+      confidence: 0.91,
+    },
+  ],
+  medications: [
+    {
+      text: "Lisinopril 10 mg PO daily",
+      matchStatus: "matched",
+      matchedCode: "RxNorm:29046",
+      confidence: 0.95,
+    },
+    {
+      text: "Atorvastatin 20 mg PO nightly",
+      matchStatus: "matched",
+      matchedCode: "RxNorm:83367",
+      confidence: 0.93,
+    },
+  ],
+  investigations: [],
+  procedures: [],
+  follow_ups: [
+    {
+      text: "Return in 1 week if symptoms persist",
+      matchStatus: "matched",
+      matchedCode: "FU:WK1",
+      confidence: 0.87,
+    },
+    {
+      text: "Chest X-ray if not improving",
+      matchStatus: "no_match",
+      confidence: 0.58,
+    },
+  ],
+};
+
+export function mockExtraction(id: string): ExtractionResult {
   const now = new Date();
-  const started = new Date(now.getTime() - 1400);
+  const elapsedMs = 18_000 + Math.round(Math.random() * 22_000);
+  const started = new Date(now.getTime() - elapsedMs);
+
+  const results = {} as Record<ExtractionCategory, ExtractionItem[]>;
+  for (const category of EXTRACTION_CATEGORIES) {
+    const fixtures = EXTRACTION_FIXTURES[category];
+    results[category] = fixtures.map((f, i) => ({
+      ...f,
+      id: `${category}-${i + 1}`,
+    }));
+  }
+
   return {
     modelId: id,
     startedAt: started.toISOString(),
     completedAt: now.toISOString(),
-    results: [
-      {
-        modelId: id,
-        category: "history_present_illness",
-        text: "Patient presents with a 3-day history of productive cough and low-grade fever.",
-        confidence: 0.92,
-      },
-      {
-        modelId: id,
-        category: "medications",
-        text: "Lisinopril 10 mg daily; Atorvastatin 20 mg nightly.",
-        confidence: 0.88,
-      },
-      {
-        modelId: id,
-        category: "assessment_and_plan",
-        text: "Acute bronchitis — supportive care, follow-up in 1 week if not improving.",
-        confidence: 0.81,
-      },
-    ],
+    results,
   };
 }

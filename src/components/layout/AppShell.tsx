@@ -8,8 +8,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <Header />
       <Sidebar />
-      <main className="ml-60 pt-14">
-        <div className="h-[calc(100vh-3.5rem)]">{children}</div>
+      <main className="ml-60 pt-14 print:ml-0 print:pt-0">
+        <div className="h-[calc(100vh-3.5rem)] print:h-auto">{children}</div>
       </main>
     </div>
   );

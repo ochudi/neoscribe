@@ -81,3 +81,17 @@
     font-feature-settings: "ss01", "cv11";
   }
 }
+
+@media print {
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print-break-inside-avoid {
+    break-inside: avoid;
+  }
+  .print-stack > * + * {
+    margin-top: 1rem;
+  }
+}

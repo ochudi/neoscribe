@@ -5,6 +5,12 @@ interface PageContainerProps {
   description?: string;
   actions?: React.ReactNode;
   children?: React.ReactNode;
+  /**
+   * When true, the body is rendered without an outer ScrollArea or padding —
+   * the page is responsible for its own internal scrolling. Useful for
+   * multi-column layouts where each column scrolls independently.
+   */
+  disableScroll?: boolean;
 }
 
 export function PageContainer({
@@ -12,6 +18,7 @@ export function PageContainer({
   description,
   actions,
   children,
+  disableScroll = false,
 }: PageContainerProps) {
   return (
     <div className="flex h-full flex-col">
@@ -31,9 +38,13 @@ export function PageContainer({
         ) : null}
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="px-8 py-6">{children}</div>
-      </ScrollArea>
+      {disableScroll ? (
+        <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
+      ) : (
+        <ScrollArea className="flex-1">
+          <div className="px-8 py-6">{children}</div>
+        </ScrollArea>
+      )}
     </div>
   );
 }
