@@ -222,3 +222,80 @@ export function mockExtraction(id: string): ExtractionResult {
     results,
   };
 }
+
+export type RunInputType = "transcript" | "structured_note";
+
+export interface RunSummary {
+  id: string;
+  modelId: string;
+  inputType: RunInputType;
+  startedAt: string;
+  completedAt: string;
+  durationS: number;
+  matched: number;
+  total: number;
+}
+
+export interface DashboardStats {
+  modelsOnline: number;
+  modelsTotal: number;
+  extractionsToday: number;
+  extractionsYesterday: number;
+  avgProcessingS: number;
+  matchRate: number;
+}
+
+const RUN_FIXTURES: Array<{
+  modelId: string;
+  inputType: RunInputType;
+  offsetMin: number;
+  durationS: number;
+  matched: number;
+  total: number;
+}> = [
+  { modelId: "qwen-2.5-7b", inputType: "transcript", offsetMin: 8, durationS: 28.43, matched: 10, total: 12 },
+  { modelId: "medgemma-4b", inputType: "transcript", offsetMin: 22, durationS: 41.7, matched: 9, total: 12 },
+  { modelId: "gemma-4-26b-a4b", inputType: "structured_note", offsetMin: 47, durationS: 33.1, matched: 11, total: 12 },
+  { modelId: "gemma-4-e4b", inputType: "transcript", offsetMin: 64, durationS: 19.6, matched: 8, total: 12 },
+  { modelId: "qwen-2.5-7b", inputType: "structured_note", offsetMin: 78, durationS: 30.8, matched: 11, total: 12 },
+  { modelId: "medgemma-4b", inputType: "transcript", offsetMin: 96, durationS: 37.2, matched: 10, total: 12 },
+  { modelId: "gemma-4-26b-a4b", inputType: "transcript", offsetMin: 124, durationS: 35.9, matched: 12, total: 12 },
+  { modelId: "qwen-2.5-7b", inputType: "transcript", offsetMin: 158, durationS: 26.5, matched: 9, total: 12 },
+  { modelId: "gemma-4-e4b", inputType: "structured_note", offsetMin: 182, durationS: 21.4, matched: 9, total: 12 },
+  { modelId: "medgemma-27b", inputType: "transcript", offsetMin: 210, durationS: 44.8, matched: 8, total: 12 },
+];
+
+export function getMockRecentRuns(): RunSummary[] {
+  const now = Date.now();
+  return RUN_FIXTURES.map((f, idx) => {
+    const completed = new Date(now - f.offsetMin * 60_000);
+    const started = new Date(completed.getTime() - f.durationS * 1000);
+    return {
+      id: `run-${idx + 1}`,
+      modelId: f.modelId,
+      inputType: f.inputType,
+      startedAt: started.toISOString(),
+      completedAt: completed.toISOString(),
+      durationS: f.durationS,
+      matched: f.matched,
+      total: f.total,
+    };
+  });
+}
+
+export function getMockDashboardStats(): DashboardStats {
+  const runs = getMockRecentRuns();
+  const avgProcessingS =
+    runs.reduce((sum, r) => sum + r.durationS, 0) / Math.max(1, runs.length);
+  const totalMatched = runs.reduce((s, r) => s + r.matched, 0);
+  const totalItems = runs.reduce((s, r) => s + r.total, 0);
+  const matchRate = totalItems === 0 ? 0 : totalMatched / totalItems;
+  return {
+    modelsOnline: BASE_MODELS.filter((m) => m.status === "online").length,
+    modelsTotal: BASE_MODELS.length,
+    extractionsToday: 23,
+    extractionsYesterday: 19,
+    avgProcessingS,
+    matchRate,
+  };
+}

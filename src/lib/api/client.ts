@@ -1,11 +1,15 @@
 import { API_BASE_URL, USE_MOCKS } from "@/lib/constants";
 import {
+  getMockDashboardStats,
   getMockModels,
+  getMockRecentRuns,
   mockExtraction,
   mockModelHealth,
+  type DashboardStats,
   type ExtractionResult,
   type Model,
   type ModelHealth,
+  type RunSummary,
 } from "@/lib/api/mocks";
 
 export interface ExtractionPayload {
@@ -62,6 +66,16 @@ export async function extractWithModel(
       body: JSON.stringify(payload),
     }
   );
+}
+
+export async function listRecentRuns(): Promise<RunSummary[]> {
+  if (USE_MOCKS) return getMockRecentRuns();
+  return request<RunSummary[]>("/v1/runs?limit=10");
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  if (USE_MOCKS) return getMockDashboardStats();
+  return request<DashboardStats>("/v1/dashboard/stats");
 }
 
 export { ApiError };
