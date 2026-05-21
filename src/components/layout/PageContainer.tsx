@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect } from "react";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PageContainerProps {
@@ -20,6 +24,10 @@ export function PageContainer({
   children,
   disableScroll = false,
 }: PageContainerProps) {
+  useEffect(() => {
+    document.title = `${title} · NeoScribe`;
+  }, [title]);
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-start justify-between gap-4 border-b border-border px-8 py-5">
