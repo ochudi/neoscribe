@@ -30,6 +30,7 @@ import { StatusDot } from "@/components/chat/shared";
 import { cn } from "@/lib/utils";
 import { extractWithModel, listModels } from "@/lib/api/client";
 import { useChatStore, type ChatInputType } from "@/lib/stores/chatStore";
+import { useHistoryStore } from "@/lib/stores/historyStore";
 import type { Model } from "@/lib/api/mocks";
 
 const PLACEHOLDERS: Record<ChatInputType, string> = {
@@ -250,10 +251,22 @@ export function CenterColumn() {
     }
   };
 
+  const addHistoryEntry = useHistoryStore((s) => s.addEntry);
+
   const handleSave = () => {
     if (!extraction) return;
+    const model = (models ?? []).find((m) => m.id === selectedModelId);
+    const itemCount = Object.values(extraction.results).flat().length;
+    addHistoryEntry({
+      modelId: selectedModelId,
+      modelName: model?.name ?? selectedModelId,
+      modelSizeLabel: model?.sizeLabel ?? "",
+      inputType,
+      input: inputContent,
+      extraction,
+    });
     toast.success("Saved to history", {
-      description: `${Object.values(extraction.results).flat().length} items from ${extraction.modelId}`,
+      description: `${itemCount} items from ${model?.name ?? selectedModelId}`,
     });
   };
 
