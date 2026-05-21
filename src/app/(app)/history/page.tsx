@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -204,7 +204,7 @@ function NoFilterMatch({ onClear }: { onClear: () => void }) {
   );
 }
 
-export default function HistoryPage() {
+function HistoryPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -432,5 +432,13 @@ export default function HistoryPage() {
         />
       </div>
     </PageContainer>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense fallback={null}>
+      <HistoryPageContent />
+    </Suspense>
   );
 }

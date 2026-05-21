@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -259,7 +259,7 @@ function ModelChip({
   );
 }
 
-export default function ComparePage() {
+function ComparePageContent() {
   const searchParams = useSearchParams();
 
   const inputContent = useChatStore((s) => s.inputContent);
@@ -553,5 +553,13 @@ export default function ComparePage() {
         onAdd={handleAdd}
       />
     </PageContainer>
+  );
+}
+
+export default function ComparePage() {
+  return (
+    <Suspense fallback={null}>
+      <ComparePageContent />
+    </Suspense>
   );
 }
