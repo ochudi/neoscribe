@@ -52,6 +52,15 @@ const MODELS: ModelDef[] = [
     provider: "huggingface",
     capabilities: ["text", "function_calling"],
   },
+  {
+    id: "llama-3.2-1b",
+    name: "Llama 3.2 1B",
+    hf_id: "meta-llama/Llama-3.2-1B-Instruct",
+    location: "edge",
+    sizeLabel: "1B",
+    provider: "meta",
+    capabilities: ["text"],
+  },
 ];
 
 const CATEGORIES = [
