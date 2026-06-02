@@ -44,22 +44,13 @@ interface ModelDef {
 // page first if it's gated).
 const MODELS: ModelDef[] = [
   {
-    id: "qwen-2.5-1.5b",
-    name: "Qwen 2.5 1.5B",
-    hf_id: "Qwen/Qwen2.5-1.5B-Instruct",
+    id: "qwen-2.5-7b",
+    name: "Qwen 2.5 7B",
+    hf_id: "Qwen/Qwen2.5-7B-Instruct",
     location: "cloud",
-    sizeLabel: "1.5B",
+    sizeLabel: "7B",
     provider: "huggingface",
     capabilities: ["text", "function_calling"],
-  },
-  {
-    id: "gemma-2-2b",
-    name: "Gemma 2 2B",
-    hf_id: "google/gemma-2-2b-it",
-    location: "cloud",
-    sizeLabel: "2B",
-    provider: "huggingface",
-    capabilities: ["text"],
   },
 ];
 
@@ -193,50 +184,55 @@ serve(async (req) => {
 
     const startedAt = new Date().toISOString();
 
-    const hfRes = await fetch(
-      `https://api-inference.huggingface.co/models/${model.hf_id}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          inputs: buildPrompt(transcript),
-          parameters: {
-            max_new_tokens: 1024,
-            return_full_text: false,
-            temperature: 0.1,
+    try {
+      // Hugging Face's current Inference endpoint: OpenAI-compatible chat
+      // completions via the router. The legacy api-inference.huggingface.co
+      // surface was deprecated in 2025.
+      const hfRes = await fetch(
+        "https://router.huggingface.co/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${HF_TOKEN}`,
+            "Content-Type": "application/json",
           },
-          options: { wait_for_model: true },
-        }),
+          body: JSON.stringify({
+            model: model.hf_id,
+            messages: [
+              { role: "user", content: buildPrompt(transcript) },
+            ],
+            max_tokens: 1024,
+            temperature: 0.1,
+          }),
+        }
+      );
+
+      if (!hfRes.ok) {
+        const text = await hfRes.text();
+        console.error(`HF ${model.hf_id} -> ${hfRes.status}: ${text}`);
+        return json(
+          {
+            error: `Inference failed (${hfRes.status})`,
+            details: text.slice(0, 800),
+          },
+          hfRes.status
+        );
       }
-    );
 
-    if (hfRes.status === 503) {
-      return json(
-        { error: "Model is warming up — try again in 15-30s." },
-        503
-      );
+      const data = await hfRes.json();
+      const content =
+        data?.choices?.[0]?.message?.content ??
+        data?.choices?.[0]?.text ??
+        "";
+
+      const parsed = extractJson(content);
+      const completedAt = new Date().toISOString();
+      return json(toExtractionResult(id, parsed, startedAt, completedAt));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`Extract exception for ${model.hf_id}:`, msg, e);
+      return json({ error: "Extract failed", details: msg }, 500);
     }
-    if (!hfRes.ok) {
-      const text = await hfRes.text();
-      return json(
-        { error: `Inference failed (${hfRes.status}): ${text.slice(0, 500)}` },
-        hfRes.status
-      );
-    }
-
-    const data = await hfRes.json();
-    const generated = Array.isArray(data)
-      ? data[0]?.generated_text ?? ""
-      : typeof data === "object" && data && "generated_text" in data
-        ? (data as any).generated_text
-        : "";
-
-    const parsed = extractJson(generated);
-    const completedAt = new Date().toISOString();
-    return json(toExtractionResult(id, parsed, startedAt, completedAt));
   }
 
   if (req.method === "GET" && path.startsWith("/runs")) {
