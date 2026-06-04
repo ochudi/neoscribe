@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ExtractionOutput } from "@/components/chat/ExtractionOutput";
 import { InputEditor } from "@/components/chat/InputEditor";
+import { MobileChatBar } from "@/components/chat/MobileChatBar";
 import {
   Dialog,
   DialogContent,
@@ -275,12 +276,13 @@ export function CenterColumn() {
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col">
+      <MobileChatBar />
       <div className="grid h-full grid-rows-2 divide-y divide-border">
         <section className="flex min-h-0 flex-col">
           <Tabs
             value={inputType}
             onValueChange={(v) => setInputType(v as ChatInputType)}
-            className="border-b border-border px-6 pt-4"
+            className="border-b border-border px-3 pt-3 sm:px-6 sm:pt-4"
           >
             <TabsList>
               <TabsTrigger value="transcript">Transcript</TabsTrigger>
@@ -289,7 +291,7 @@ export function CenterColumn() {
           </Tabs>
 
           <ScrollArea className="flex-1">
-            <div className="flex flex-col gap-3 px-6 py-4">
+            <div className="flex flex-col gap-3 px-3 py-3 sm:px-6 sm:py-4">
               <InputEditor
                 value={inputContent}
                 onChange={setInputContent}
@@ -339,12 +341,12 @@ export function CenterColumn() {
         </section>
 
         <section className="flex min-h-0 flex-col">
-          <div className="flex items-center justify-between border-b border-border px-6 py-3">
+          <div className="flex items-center justify-between border-b border-border px-3 py-3 sm:px-6">
             <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
               Output
             </span>
             {selectedModelId ? (
-              <span className="font-mono text-[12px] text-muted-foreground">
+              <span className="hidden font-mono text-[12px] text-muted-foreground sm:inline">
                 model: {selectedModelId}
               </span>
             ) : null}
@@ -355,7 +357,7 @@ export function CenterColumn() {
             ) : error ? (
               <OutputError message={error} onRetry={handleRun} />
             ) : extraction ? (
-              <div className="p-6">
+              <div className="p-3 sm:p-6">
                 <ExtractionOutput extraction={extraction} />
               </div>
             ) : (

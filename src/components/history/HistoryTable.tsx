@@ -101,6 +101,99 @@ interface HistoryTableProps {
   onDelete: (entry: HistoryEntry) => void;
 }
 
+function MobileCardList({
+  entries,
+  onOpen,
+  onRerun,
+  onDelete,
+}: Omit<HistoryTableProps, "sort" | "onSortChange">) {
+  return (
+    <ul className="flex flex-col gap-3 md:hidden">
+      {entries.map((entry) => {
+        const { matched, total } = matchStatsFor(entry);
+        const dur = processingSecondsFor(entry);
+        return (
+          <li
+            key={entry.id}
+            className="rounded-md border border-border bg-background p-4 transition-colors hover:bg-muted/30"
+          >
+            <button
+              type="button"
+              onClick={() => onOpen(entry)}
+              className="flex w-full flex-col gap-3 text-left"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <p className="truncate text-[14px] font-medium text-foreground">
+                    {entry.modelName}
+                  </p>
+                  <p className="font-mono text-[11px] text-muted-foreground">
+                    {formatSavedAt(entry.savedAt)}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {entry.modelSizeLabel ? (
+                    <span className="rounded border border-border px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
+                      {entry.modelSizeLabel}
+                    </span>
+                  ) : null}
+                  <span className="rounded border border-border px-1 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {entry.inputType === "transcript" ? "Tr" : "Note"}
+                  </span>
+                </div>
+              </div>
+
+              <p className="line-clamp-2 font-mono text-[12px] text-muted-foreground">
+                {inputPreview(entry.input) || "(empty input)"}
+              </p>
+
+              <div className="flex items-center justify-between gap-3">
+                <MatchMiniBar matched={matched} total={total} />
+                <span className="font-mono text-[12px] text-foreground">
+                  {dur.toFixed(1)}s
+                </span>
+              </div>
+            </button>
+
+            <div className="mt-3 flex items-center gap-1 border-t border-border pt-3">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-1 px-2"
+                onClick={() => onOpen(entry)}
+              >
+                View
+              </Button>
+              <span aria-hidden="true" className="text-muted-foreground">
+                ·
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-1 px-2"
+                onClick={() => onRerun(entry)}
+              >
+                Re-run
+              </Button>
+              <span aria-hidden="true" className="text-muted-foreground">
+                ·
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="flex-1 px-2 text-status-offline hover:text-status-offline"
+                onClick={() => onDelete(entry)}
+              >
+                Delete
+              </Button>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function HistoryTable({
   entries,
   sort,
@@ -110,7 +203,15 @@ export function HistoryTable({
   onDelete,
 }: HistoryTableProps) {
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-background">
+    <>
+      <MobileCardList
+        entries={entries}
+        onOpen={onOpen}
+        onRerun={onRerun}
+        onDelete={onDelete}
+      />
+
+      <div className="hidden overflow-hidden rounded-md border border-border bg-background md:block">
       <div
         className={cn(
           "grid items-center gap-3 border-b border-border bg-muted/30 px-4 py-2",
@@ -237,6 +338,7 @@ export function HistoryTable({
           );
         })}
       </ul>
-    </div>
+      </div>
+    </>
   );
 }

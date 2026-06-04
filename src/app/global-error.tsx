@@ -28,12 +28,16 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     <html lang="en">
       <body className={inter.variable}>
         <ErrorShell
-          code="500"
-          title="The app couldn't start."
-          description="A fatal error stopped NeoScribe from loading. Reload to try again — if it persists, send the reference below to the team."
-          actions={[
-            { label: "Reload", onClick: reset, variant: "primary" },
+          code="FATAL"
+          eyebrow="Could not start"
+          title="NeoScribe couldn't boot."
+          description="A fatal error stopped the app from loading. Reload to try again — if it persists, send the reference below to the team."
+          suggestions={[
+            "Reload the page.",
+            "Hard refresh to flush a stale bundle (Cmd+Shift+R).",
+            "If it still won't load, your network may be blocking the assets.",
           ]}
+          actions={[{ label: "Reload", onClick: reset, variant: "primary" }]}
           digest={error.digest}
         />
       </body>

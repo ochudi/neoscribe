@@ -188,6 +188,97 @@ function RawJsonDialog({
   );
 }
 
+export function MetadataBody({
+  extraction,
+}: {
+  extraction: ExtractionResult | null;
+}) {
+  const [rawOpen, setRawOpen] = useState(false);
+
+  if (!extraction) {
+    return (
+      <div className="px-4 py-6 text-[12px] text-muted-foreground">
+        Metadata will appear after an extraction completes.
+      </div>
+    );
+  }
+
+  const allItems = flattenItems(extraction);
+  const matched = allItems.filter((i) => i.matchStatus === "matched").length;
+  const total = allItems.length;
+
+  return (
+    <>
+      <div className="flex flex-col gap-5 px-4 py-4">
+        <div>
+          <SectionLabel>Processing time</SectionLabel>
+          <p className="mt-1 font-mono text-[28px] font-medium leading-tight text-foreground">
+            {processingSeconds(extraction).toFixed(2)}s
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <SectionLabel>Match summary</SectionLabel>
+          <MatchBar matched={matched} total={total} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <SectionLabel>Per section</SectionLabel>
+          <PerSection extraction={extraction} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <SectionLabel>Actions</SectionLabel>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setRawOpen(true)}
+            className="justify-start"
+          >
+            <Braces className="h-3.5 w-3.5" />
+            View raw JSON
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() =>
+              copyToClipboard(JSON.stringify(extraction, null, 2), "JSON")
+            }
+            className="justify-start"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Copy JSON
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => copyToClipboard(buildMarkdown(extraction), "Markdown")}
+            className="justify-start"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Copy as Markdown
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => copyToClipboard(buildTable(extraction), "Table")}
+            className="justify-start"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Copy as table
+          </Button>
+        </div>
+      </div>
+
+      <RawJsonDialog
+        open={rawOpen}
+        onOpenChange={setRawOpen}
+        extraction={extraction}
+      />
+    </>
+  );
+}
+
 export function MetadataRail() {
   const expanded = useChatStore(
     (s) => s.expandedSections[RIGHT_RAIL_KEY] !== false
@@ -195,11 +286,9 @@ export function MetadataRail() {
   const toggleSection = useChatStore((s) => s.toggleSection);
   const extraction = useChatStore((s) => s.currentExtraction);
 
-  const [rawOpen, setRawOpen] = useState(false);
-
   if (!expanded) {
     return (
-      <aside className="flex w-10 shrink-0 flex-col border-l border-border bg-background">
+      <aside className="hidden w-10 shrink-0 flex-col border-l border-border bg-background lg:flex">
         <button
           type="button"
           onClick={() => toggleSection(RIGHT_RAIL_KEY)}
@@ -212,12 +301,8 @@ export function MetadataRail() {
     );
   }
 
-  const allItems = extraction ? flattenItems(extraction) : [];
-  const matched = allItems.filter((i) => i.matchStatus === "matched").length;
-  const total = allItems.length;
-
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-l border-border bg-background">
+    <aside className="hidden w-80 shrink-0 flex-col border-l border-border bg-background lg:flex">
       <div className="flex items-center justify-between px-4 pt-4">
         <SectionLabel>Metadata</SectionLabel>
         <button
@@ -231,85 +316,8 @@ export function MetadataRail() {
       </div>
 
       <ScrollArea className="flex-1">
-        {!extraction ? (
-          <div className="px-4 py-6 text-[12px] text-muted-foreground">
-            Metadata will appear after an extraction completes.
-          </div>
-        ) : (
-          <div className="flex flex-col gap-5 px-4 py-4">
-            <div>
-              <SectionLabel>Processing time</SectionLabel>
-              <p className="mt-1 font-mono text-[28px] font-medium leading-tight text-foreground">
-                {processingSeconds(extraction).toFixed(2)}s
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <SectionLabel>Match summary</SectionLabel>
-              <MatchBar matched={matched} total={total} />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <SectionLabel>Per section</SectionLabel>
-              <PerSection extraction={extraction} />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <SectionLabel>Actions</SectionLabel>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setRawOpen(true)}
-                className="justify-start"
-              >
-                <Braces className="h-3.5 w-3.5" />
-                View raw JSON
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  copyToClipboard(JSON.stringify(extraction, null, 2), "JSON")
-                }
-                className="justify-start"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                Copy JSON
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  copyToClipboard(buildMarkdown(extraction), "Markdown")
-                }
-                className="justify-start"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                Copy as Markdown
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  copyToClipboard(buildTable(extraction), "Table")
-                }
-                className="justify-start"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                Copy as table
-              </Button>
-            </div>
-          </div>
-        )}
+        <MetadataBody extraction={extraction} />
       </ScrollArea>
-
-      {extraction ? (
-        <RawJsonDialog
-          open={rawOpen}
-          onOpenChange={setRawOpen}
-          extraction={extraction}
-        />
-      ) : null}
     </aside>
   );
 }

@@ -12,11 +12,17 @@ export default function NotFound() {
   return (
     <ErrorShell
       code="404"
-      title="This page hasn't been written yet."
-      description="The URL you opened doesn't match any page in NeoScribe. It may have been renamed, never existed, or only lives in a future commit."
+      eyebrow="Not found"
+      title="That page isn't here."
+      description="The URL you opened doesn't match anything in NeoScribe. It may have been renamed, never existed, or only lives in a future commit."
+      suggestions={[
+        "Double-check the spelling of the URL.",
+        "Open the dashboard for a tour of what does exist.",
+        "Try the model catalogue if you were heading there.",
+      ]}
       actions={[
         { label: "Back to dashboard", href: "/", variant: "primary" },
-        { label: "Open chat", href: "/chat", variant: "outline" },
+        { label: "View models", href: "/models", variant: "outline" },
       ]}
     />
   );

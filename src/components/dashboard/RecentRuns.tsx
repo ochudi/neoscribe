@@ -102,8 +102,8 @@ export function RecentRuns({ runs, models }: RecentRunsProps) {
               <MatchMiniBar matched={run.matched} total={run.total} />
               <div className="flex justify-end">
                 <Button asChild size="sm" variant="ghost">
-                  <Link href={`/history?run=${encodeURIComponent(run.id)}`}>
-                    Open
+                  <Link href={`/chat?model=${encodeURIComponent(run.modelId)}`}>
+                    Re-run
                   </Link>
                 </Button>
               </div>

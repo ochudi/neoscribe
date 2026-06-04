@@ -199,7 +199,7 @@ export function ModelRail() {
 
   if (!expanded) {
     return (
-      <aside className="flex w-10 shrink-0 flex-col border-r border-border bg-background">
+      <aside className="hidden w-10 shrink-0 flex-col border-r border-border bg-background lg:flex">
         <button
           type="button"
           onClick={() => toggleSection(LEFT_RAIL_KEY)}
@@ -213,7 +213,7 @@ export function ModelRail() {
   }
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-background">
+    <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-background lg:flex">
       <div className="flex items-center justify-between px-4 pt-4">
         <SectionLabel>Model</SectionLabel>
         <button

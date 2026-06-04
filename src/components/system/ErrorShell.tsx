@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export interface ErrorShellAction {
   label: string;
@@ -14,23 +15,49 @@ export interface ErrorShellAction {
 
 interface ErrorShellProps {
   code: string;
+  eyebrow?: string;
   title: string;
   description: string;
+  suggestions?: string[];
   actions: ErrorShellAction[];
   digest?: string;
+  /** Set false to suppress the giant background watermark on minimal pages. */
+  watermark?: boolean;
 }
 
 export function ErrorShell({
   code,
+  eyebrow,
   title,
   description,
+  suggestions,
   actions,
   digest,
+  watermark = true,
 }: ErrorShellProps) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="flex w-full max-w-md flex-col items-start gap-8">
-        <div className="flex items-center gap-3">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6">
+      {watermark ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+        >
+          <span
+            className={cn(
+              "select-none font-mono font-bold leading-none tracking-tighter text-foreground/[0.04]",
+              "text-[36vw] sm:text-[28vw] lg:text-[22vw]"
+            )}
+          >
+            {code}
+          </span>
+        </div>
+      ) : null}
+
+      <div className="relative flex w-full max-w-lg flex-col items-start gap-8">
+        <Link
+          href="/"
+          className="group flex items-center gap-3 transition-opacity hover:opacity-80"
+        >
           <Image
             src="/plural-icon.png"
             alt="Plural Health"
@@ -43,19 +70,36 @@ export function ErrorShell({
           <span className="text-[14px] font-medium text-foreground">
             NeoScribe
           </span>
-        </div>
+        </Link>
 
         <div className="flex flex-col gap-3">
-          <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-            Error {code}
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+            {eyebrow ?? `Error ${code}`}
           </p>
-          <h1 className="text-[32px] font-semibold leading-tight tracking-tight text-foreground">
+          <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-foreground sm:text-[32px]">
             {title}
           </h1>
-          <p className="text-[15px] leading-relaxed text-muted-foreground">
+          <p className="max-w-md text-[15px] leading-relaxed text-muted-foreground">
             {description}
           </p>
         </div>
+
+        {suggestions && suggestions.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {suggestions.map((s, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-2 text-[14px] text-foreground"
+              >
+                <span
+                  aria-hidden="true"
+                  className="mt-2 inline-block h-1 w-1 shrink-0 rounded-full bg-foreground/40"
+                />
+                <span>{s}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
           {actions.map((action, i) => {
