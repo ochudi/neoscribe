@@ -2,8 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, Cpu } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Cpu,
+  Download,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import {
   DropdownMenu,
@@ -15,17 +25,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import {
-  CAPABILITY_META,
-  STATUS_META,
+  RuntimeBadge,
   StatusDot,
-  formatMemory,
-  relativeShort,
+  statusLabel,
 } from "@/components/chat/shared";
+import { LocalModelGate } from "@/components/models/LocalModelGate";
 import { cn } from "@/lib/utils";
-import { listModels } from "@/lib/api/client";
+import { useModels } from "@/lib/hooks/useModels";
+import { formatMb } from "@/lib/local/device";
+import {
+  ensureLoaded,
+  removeDownload,
+  useLocalEngineStore,
+} from "@/lib/local/engine";
 import { useChatStore, LEFT_RAIL_KEY } from "@/lib/stores/chatStore";
-import type { Model } from "@/lib/api/mocks";
+import type { Model } from "@/lib/api/types";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -35,7 +51,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function GroupedPicker({
+export function GroupedPicker({
   models,
   selectedId,
   onSelect,
@@ -46,14 +62,13 @@ function GroupedPicker({
 }) {
   const selected = models.find((m) => m.id === selectedId);
 
-  const grouped = useMemo(() => {
-    return {
-      cloud: models.filter((m) => m.location === "cloud"),
-      edge: models.filter((m) => m.location === "edge"),
-    };
-  }, [models]);
-
-  const triggerLabel = selected ? selected.name : "Select a model";
+  const grouped = useMemo(
+    () => ({
+      cloud: models.filter((m) => m.runtime === "cloud"),
+      device: models.filter((m) => m.runtime === "device"),
+    }),
+    [models]
+  );
 
   return (
     <DropdownMenu>
@@ -64,20 +79,34 @@ function GroupedPicker({
         )}
       >
         <span className="flex min-w-0 items-center gap-2">
-          {selected ? <StatusDot status={selected.status} /> : <Cpu className="h-3.5 w-3.5 text-muted-foreground" />}
-          <span className="truncate text-foreground">{triggerLabel}</span>
+          {selected ? (
+            <StatusDot status={selected.status} />
+          ) : (
+            <Cpu className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
+          <span className="truncate text-foreground">
+            {selected ? selected.name : "Select a model"}
+          </span>
         </span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)]">
-        {(["cloud", "edge"] as const).map((group, gi) => {
+      <DropdownMenuContent
+        align="start"
+        className="max-h-96 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto"
+      >
+        {(
+          [
+            ["cloud", "Cloud — hosted GPUs"],
+            ["device", "On-device — runs in your browser"],
+          ] as const
+        ).map(([group, label], gi) => {
           const items = grouped[group];
           if (items.length === 0) return null;
           return (
             <DropdownMenuGroup key={group}>
               {gi > 0 ? <DropdownMenuSeparator /> : null}
               <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {group}
+                {label}
               </DropdownMenuLabel>
               {items.map((m) => (
                 <DropdownMenuItem
@@ -89,9 +118,6 @@ function GroupedPicker({
                   <span className="flex-1 truncate text-[13px]">{m.name}</span>
                   <span className="rounded border border-border px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
                     {m.sizeLabel}
-                  </span>
-                  <span className="rounded border border-border px-1 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {m.location}
                   </span>
                   {m.id === selectedId ? (
                     <Check className="h-3.5 w-3.5 text-foreground" />
@@ -106,15 +132,56 @@ function GroupedPicker({
   );
 }
 
-function ModelDetail({ model }: { model: Model }) {
-  const [nowMs, setNowMs] = useState(() => Date.now());
+function DownloadProgress({ modelId }: { modelId: string }) {
+  const runtime = useLocalEngineStore((s) => s.states[modelId]);
+  if (!runtime?.progress) return null;
+  const { loadedMb, totalMb } = runtime.progress;
+  const pct = totalMb > 0 ? Math.min(100, Math.round((loadedMb / totalMb) * 100)) : 0;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full bg-foreground/70 transition-[width]"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="font-mono text-[11px] text-muted-foreground">
+        {formatMb(loadedMb)} of {formatMb(totalMb)} ({pct}%)
+      </p>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
+export function ModelDetail({ model }: { model: Model }) {
+  const [gateOpen, setGateOpen] = useState(false);
+  const runtime = useLocalEngineStore((s) => s.states[model.id]);
+  const downloaded = useLocalEngineStore((s) => !!s.downloaded[model.id]);
 
-  const status = STATUS_META[model.status];
+  const isDevice = model.runtime === "device";
+  const busy =
+    runtime?.status === "downloading" ||
+    runtime?.status === "loading" ||
+    runtime?.status === "generating";
+
+  const startDownload = async (modelId: string) => {
+    try {
+      await ensureLoaded(modelId);
+      toast.success(`${model.name} is ready`, {
+        description: "Loaded into memory on this device.",
+      });
+    } catch (e) {
+      toast.error("Couldn't prepare the model", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    }
+  };
+
+  const handleRemove = async () => {
+    await removeDownload(model.id);
+    toast.success(`${model.name} removed`, {
+      description: "Its files were deleted from the browser cache.",
+    });
+  };
 
   return (
     <div className="flex flex-col gap-3 border-t border-border px-4 py-4">
@@ -127,46 +194,90 @@ function ModelDetail({ model }: { model: Model }) {
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-foreground">
-          {model.location}
-        </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <RuntimeBadge runtime={model.runtime} />
         <span className="font-mono text-[12px] text-muted-foreground">
           {model.provider}
         </span>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {model.capabilities.map((cap) => {
-          const meta = CAPABILITY_META[cap];
-          const Icon = meta.icon;
-          return (
-            <span
-              key={cap}
-              className="inline-flex items-center gap-1 rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[11px] text-foreground"
-            >
-              <Icon className="h-3 w-3" />
-              {meta.label}
-            </span>
-          );
-        })}
-      </div>
+      <p className="text-[12px] leading-relaxed text-muted-foreground">
+        {model.description}
+      </p>
 
-      {model.location === "edge" && model.sizeMb ? (
-        <p className="font-mono text-[12px] text-muted-foreground">
-          Memory: {formatMemory(model.sizeMb)}
+      {isDevice && model.downloadMb ? (
+        <p className="font-mono text-[11px] text-muted-foreground">
+          {formatMb(model.downloadMb)} download · needs ~{model.minRamGb} GB RAM
+        </p>
+      ) : null}
+      {!isDevice && model.typicalLatencyS ? (
+        <p className="font-mono text-[11px] text-muted-foreground">
+          Typically ~{model.typicalLatencyS}s per extraction
         </p>
       ) : null}
 
       <div className="flex items-center justify-between gap-2 text-[12px]">
         <span className="flex items-center gap-1.5">
           <StatusDot status={model.status} />
-          <span className="text-foreground">{status.label}</span>
+          <span className="text-foreground">{statusLabel(model)}</span>
         </span>
-        <span className="font-mono text-muted-foreground">
-          {relativeShort(model.lastCheckedAt, nowMs)}
-        </span>
+        {runtime?.tps ? (
+          <span className="font-mono text-muted-foreground">
+            {runtime.tps.toFixed(1)} tok/s
+          </span>
+        ) : null}
       </div>
+
+      {isDevice && runtime?.status === "downloading" ? (
+        <DownloadProgress modelId={model.id} />
+      ) : null}
+
+      {isDevice && model.status !== "offline" ? (
+        <div className="flex flex-col gap-1.5">
+          {!downloaded && !busy ? (
+            <Button size="sm" variant="outline" onClick={() => setGateOpen(true)}>
+              <Download className="h-3.5 w-3.5" />
+              Download to this device
+            </Button>
+          ) : null}
+          {downloaded && !busy ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleRemove}
+              className="justify-start text-muted-foreground"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Remove download
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {isDevice && model.status === "offline" && model.statusDetail ? (
+        <p className="rounded-md border border-status-offline/40 bg-status-offline/5 p-2 text-[12px] text-foreground">
+          {model.statusDetail}
+        </p>
+      ) : null}
+
+      {model.hfUrl ? (
+        <a
+          href={model.hfUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
+        >
+          Model card on Hugging Face
+          <ArrowUpRight className="h-3 w-3" />
+        </a>
+      ) : null}
+
+      <LocalModelGate
+        model={model}
+        open={gateOpen}
+        onOpenChange={setGateOpen}
+        onConfirm={startDownload}
+      />
     </div>
   );
 }
@@ -179,21 +290,21 @@ export function ModelRail() {
   const selectedModelId = useChatStore((s) => s.selectedModelId);
   const setSelectedModelId = useChatStore((s) => s.setSelectedModelId);
 
-  const { data } = useQuery({
-    queryKey: ["models"],
-    queryFn: listModels,
-    refetchInterval: 15_000,
-  });
+  const { models, isLoading } = useModels();
 
-  const models = useMemo(() => data ?? [], [data]);
-
+  // Default to the first reachable cloud model; don't fall back to an
+  // on-device model just because the cloud catalog hasn't loaded yet.
   useEffect(() => {
-    if (!selectedModelId && models.length > 0) {
-      const firstOnline =
-        models.find((m) => m.status === "online") ?? models[0];
-      setSelectedModelId(firstOnline.id);
+    if (selectedModelId || models.length === 0) return;
+    const best =
+      models.find((m) => m.runtime === "cloud" && m.status === "online") ??
+      models.find((m) => m.status === "online");
+    if (best) {
+      setSelectedModelId(best.id);
+    } else if (!isLoading) {
+      setSelectedModelId(models[0].id);
     }
-  }, [models, selectedModelId, setSelectedModelId]);
+  }, [models, isLoading, selectedModelId, setSelectedModelId]);
 
   const selectedModel = models.find((m) => m.id === selectedModelId);
 
@@ -213,7 +324,7 @@ export function ModelRail() {
   }
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-background lg:flex">
+    <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-background lg:flex">
       <div className="flex items-center justify-between px-4 pt-4">
         <SectionLabel>Model</SectionLabel>
         <button
@@ -249,7 +360,7 @@ export function ModelRail() {
           href="/models"
           className="inline-flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
         >
-          View all models
+          Browse all models
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>

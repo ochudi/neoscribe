@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Play, Plus, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
@@ -18,12 +18,14 @@ import { AddModelDialog } from "@/components/compare/AddModelDialog";
 import { CompareColumn } from "@/components/compare/CompareColumn";
 import { CompareSummary } from "@/components/compare/CompareSummary";
 import { ExportMenu, type ExportFormat } from "@/components/compare/ExportMenu";
+import { LocalModelGate } from "@/components/models/LocalModelGate";
 import { cn } from "@/lib/utils";
-import { extractWithModel, listModels } from "@/lib/api/client";
-import {
-  useChatStore,
-  type ChatInputType,
-} from "@/lib/stores/chatStore";
+import { ApiError } from "@/lib/api/client";
+import { useModels } from "@/lib/hooks/useModels";
+import { useLocalEngineStore } from "@/lib/local/engine";
+import { runExtraction } from "@/lib/runExtraction";
+import { SAMPLE_INPUTS } from "@/lib/samples";
+import { useChatStore, type ChatInputType } from "@/lib/stores/chatStore";
 import {
   CATEGORY_LABELS,
   EXTRACTION_CATEGORIES,
@@ -33,7 +35,7 @@ import type {
   ExtractionItem,
   ExtractionResult,
   Model,
-} from "@/lib/api/mocks";
+} from "@/lib/api/types";
 import type {
   CategoryAnnotation,
   ItemAnnotation,
@@ -41,14 +43,18 @@ import type {
 
 const PLACEHOLDERS: Record<ChatInputType, string> = {
   transcript:
-    "Paste a clinician–patient transcript here.\n\nExample:\nPatient: I've had this cough for three days...\nClinician: Any fever?\nPatient: Mild, comes and goes.",
+    "Paste a clinician–patient conversation here, or load a sample.\n\nExample:\nPatient: I've had this cough for three days...\nClinician: Any fever?",
   structured_note:
-    "Paste or compose a structured clinical note.\n\n## HPI\n...\n\n## ROS\n...\n\n## Medications\n...",
+    "Paste a structured clinical note here, or load a sample.\n\n## HPI\n...\n\n## Medications\n...",
 };
 
 const MAX_MODELS = 3;
 const MIN_MODELS = 2;
-const ESTIMATED_S_PER_MODEL = 30;
+
+interface RunError {
+  message: string;
+  details?: string | null;
+}
 
 function normalizeKey(item: ExtractionItem) {
   if (item.matchedCode) return `code:${item.matchedCode}`;
@@ -56,8 +62,11 @@ function normalizeKey(item: ExtractionItem) {
 }
 
 interface DiffMaps {
-  itemAnnotations: Record<string, Record<string, ItemAnnotation>>; // modelId -> itemId -> annotation
-  categoryAnnotations: Record<string, Partial<Record<ExtractionCategory, CategoryAnnotation>>>;
+  itemAnnotations: Record<string, Record<string, ItemAnnotation>>;
+  categoryAnnotations: Record<
+    string,
+    Partial<Record<ExtractionCategory, CategoryAnnotation>>
+  >;
 }
 
 function buildDiffMaps(
@@ -71,15 +80,10 @@ function buildDiffMaps(
     categoryAnnotations[m.id] = {};
   }
 
-  const totalModels = selectedModels.length;
-  if (totalModels < 2) return { itemAnnotations, categoryAnnotations };
-
-  // Only run diff for models that actually have results.
   const readyModels = selectedModels.filter((m) => !!results[m.id]);
   if (readyModels.length < 2) return { itemAnnotations, categoryAnnotations };
 
   for (const category of EXTRACTION_CATEGORIES) {
-    // Per-category counts
     const perModelCounts = selectedModels.map((m) => ({
       label: m.name.split(/\s+/)[0],
       count: (results[m.id]?.results[category] ?? []).length,
@@ -87,11 +91,9 @@ function buildDiffMaps(
     const counts = new Set(perModelCounts.map((p) => p.count));
     const countsDiffer = counts.size > 1;
 
-    // Cross-model item presence
-    const presence = new Map<string, Set<string>>(); // key -> set(modelId)
+    const presence = new Map<string, Set<string>>();
     for (const m of readyModels) {
-      const items = results[m.id]?.results[category] ?? [];
-      for (const item of items) {
+      for (const item of results[m.id]?.results[category] ?? []) {
         const key = normalizeKey(item);
         const set = presence.get(key) ?? new Set<string>();
         set.add(m.id);
@@ -100,10 +102,8 @@ function buildDiffMaps(
     }
 
     for (const m of readyModels) {
-      const items = results[m.id]?.results[category] ?? [];
-      for (const item of items) {
-        const key = normalizeKey(item);
-        const inModels = presence.get(key) ?? new Set<string>();
+      for (const item of results[m.id]?.results[category] ?? []) {
+        const inModels = presence.get(normalizeKey(item)) ?? new Set<string>();
         if (inModels.size < readyModels.length && inModels.size > 0) {
           const labels = readyModels
             .filter((rm) => inModels.has(rm.id))
@@ -157,7 +157,7 @@ function buildMarkdown(
     "",
   ];
   for (const m of selectedModels) {
-    lines.push(`- ${m.name} (${m.location} · ${m.sizeLabel})`);
+    lines.push(`- ${m.name} (${m.runtime} · ${m.sizeLabel})`);
   }
   lines.push("");
 
@@ -165,21 +165,16 @@ function buildMarkdown(
     const r = results[m.id];
     lines.push(`## ${m.name}`);
     if (!r) {
-      lines.push("");
-      lines.push("_No result._");
-      lines.push("");
+      lines.push("", "_No result._", "");
       continue;
     }
-    const flat = EXTRACTION_CATEGORIES.flatMap(
-      (c) => r.results[c] ?? []
-    );
-    const matched = flat.filter((i) => i.matchStatus === "matched").length;
+    const flat = EXTRACTION_CATEGORIES.flatMap((c) => r.results[c] ?? []);
+    const coded = flat.filter((i) => i.matchStatus === "matched").length;
     const elapsedS =
-      (new Date(r.completedAt).getTime() -
-        new Date(r.startedAt).getTime()) /
+      (new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()) /
       1000;
     lines.push(
-      `Processing time: ${elapsedS.toFixed(2)}s · Match rate: ${matched}/${flat.length}`
+      `Processing time: ${elapsedS.toFixed(2)}s · Coded: ${coded}/${flat.length}`
     );
     lines.push("");
     for (const category of EXTRACTION_CATEGORIES) {
@@ -189,9 +184,8 @@ function buildMarkdown(
         lines.push("_No items extracted._");
       } else {
         for (const item of items) {
-          const tag = item.matchStatus === "matched" ? "matched" : "no_match";
           const code = item.matchedCode ? ` (${item.matchedCode})` : "";
-          lines.push(`- [${tag}] ${item.text}${code}`);
+          lines.push(`- ${item.text}${code}`);
         }
       }
       lines.push("");
@@ -215,7 +209,7 @@ function buildJson(
       models: selectedModels.map((m) => ({
         id: m.id,
         name: m.name,
-        location: m.location,
+        runtime: m.runtime,
         sizeLabel: m.sizeLabel,
       })),
       results,
@@ -228,11 +222,9 @@ function buildJson(
 function ModelChip({
   model,
   onRemove,
-  removable,
 }: {
   model: Model;
   onRemove: () => void;
-  removable: boolean;
 }) {
   return (
     <div className="flex items-center gap-2 rounded-full border border-border bg-background py-1 pl-3 pr-1.5">
@@ -244,13 +236,7 @@ function ModelChip({
       <button
         type="button"
         onClick={onRemove}
-        disabled={!removable}
-        className={cn(
-          "ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors",
-          removable
-            ? "hover:bg-muted hover:text-foreground"
-            : "cursor-not-allowed opacity-40"
-        )}
+        className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         aria-label={`Remove ${model.name}`}
       >
         <X className="h-3 w-3" />
@@ -261,6 +247,7 @@ function ModelChip({
 
 function ComparePageContent() {
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
 
   const inputContent = useChatStore((s) => s.inputContent);
   const setInputContent = useChatStore((s) => s.setInputContent);
@@ -268,39 +255,49 @@ function ComparePageContent() {
   const setInputType = useChatStore((s) => s.setInputType);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [results, setResults] = useState<
-    Record<string, ExtractionResult | null>
-  >({});
+  const [results, setResults] = useState<Record<string, ExtractionResult | null>>({});
   const [loadingMap, setLoadingMap] = useState<Record<string, boolean>>({});
-  const [errors, setErrors] = useState<Record<string, string | null>>({});
-  const [highlightDiffs, setHighlightDiffs] = useState(false);
+  const [errors, setErrors] = useState<Record<string, RunError | null>>({});
+  const [highlightDiffs, setHighlightDiffs] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [seeded, setSeeded] = useState(false);
 
-  const { data: modelsData } = useQuery({
-    queryKey: ["models"],
-    queryFn: listModels,
-    refetchInterval: 15_000,
-  });
+  // Spec-check queue for on-device models that still need a download.
+  const [gateQueue, setGateQueue] = useState<Model[]>([]);
+  const gateConfirmed = useRef(false);
+  const pendingRunRef = useRef(false);
 
-  const models = useMemo(() => modelsData ?? [], [modelsData]);
+  const { models, isLoading: modelsLoading } = useModels();
+  const downloadedMap = useLocalEngineStore((s) => s.downloaded);
 
-  // Seed selection from URL params or sensible defaults.
+  // Seed selection from URL params or sensible defaults — but not before the
+  // cloud catalog has loaded, or we'd "default" to nothing.
   useEffect(() => {
-    if (seeded || models.length === 0) return;
-    const fromUrl = [
-      searchParams.get("model"),
-      searchParams.get("with"),
-    ].filter((v): v is string => !!v && models.some((m) => m.id === v));
+    if (seeded || models.length === 0 || modelsLoading) return;
+    const fromUrl = [searchParams.get("model"), searchParams.get("with")].filter(
+      (v): v is string => !!v && models.some((m) => m.id === v)
+    );
     if (fromUrl.length > 0) {
-      setSelectedIds(Array.from(new Set(fromUrl)).slice(0, MAX_MODELS));
+      const seedIds = Array.from(new Set(fromUrl));
+      // Pair a lone model with the first online cloud model that isn't it.
+      if (seedIds.length < MIN_MODELS) {
+        const partner = models.find(
+          (m) =>
+            m.runtime === "cloud" &&
+            m.status === "online" &&
+            !seedIds.includes(m.id)
+        );
+        if (partner) seedIds.push(partner.id);
+      }
+      setSelectedIds(seedIds.slice(0, MAX_MODELS));
     } else {
-      // Default to first two online models.
-      const online = models.filter((m) => m.status === "online");
+      const online = models.filter(
+        (m) => m.runtime === "cloud" && m.status === "online"
+      );
       setSelectedIds(online.slice(0, 2).map((m) => m.id));
     }
     setSeeded(true);
-  }, [seeded, models, searchParams]);
+  }, [seeded, models, modelsLoading, searchParams]);
 
   const selectedModels = useMemo(
     () =>
@@ -324,41 +321,96 @@ function ComparePageContent() {
 
   const handleRemove = (id: string) => {
     setSelectedIds((prev) => prev.filter((x) => x !== id));
-    setResults((prev) => {
-      const { [id]: _drop, ...rest } = prev;
-      void _drop;
+    const drop = <T,>(map: Record<string, T>) => {
+      const rest = { ...map };
+      delete rest[id];
       return rest;
-    });
-    setLoadingMap((prev) => {
-      const { [id]: _drop, ...rest } = prev;
-      void _drop;
-      return rest;
-    });
-    setErrors((prev) => {
-      const { [id]: _drop, ...rest } = prev;
-      void _drop;
-      return rest;
-    });
+    };
+    setResults(drop);
+    setLoadingMap(drop);
+    setErrors(drop);
   };
 
-  const runOne = async (id: string) => {
-    setLoadingMap((prev) => ({ ...prev, [id]: true }));
-    setErrors((prev) => ({ ...prev, [id]: null }));
-    setResults((prev) => ({ ...prev, [id]: null }));
+  const runOne = async (model: Model) => {
+    setLoadingMap((prev) => ({ ...prev, [model.id]: true }));
+    setErrors((prev) => ({ ...prev, [model.id]: null }));
+    setResults((prev) => ({ ...prev, [model.id]: null }));
     try {
-      const res = await extractWithModel(id, { transcript: inputContent });
-      setResults((prev) => ({ ...prev, [id]: res }));
+      const res = await runExtraction(model, inputContent, inputType);
+      setResults((prev) => ({ ...prev, [model.id]: res }));
+      queryClient.invalidateQueries({ queryKey: ["runs"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Unknown error";
-      setErrors((prev) => ({ ...prev, [id]: msg }));
+      const err: RunError =
+        e instanceof ApiError
+          ? { message: e.message, details: e.details }
+          : { message: e instanceof Error ? e.message : "Unknown error" };
+      setErrors((prev) => ({ ...prev, [model.id]: err }));
     } finally {
-      setLoadingMap((prev) => ({ ...prev, [id]: false }));
+      setLoadingMap((prev) => ({ ...prev, [model.id]: false }));
     }
   };
 
-  const handleRunAll = async () => {
+  const startAll = async () => {
+    const cloud = selectedModels.filter((m) => m.runtime === "cloud");
+    const device = selectedModels.filter((m) => m.runtime === "device");
+    // Mark everything as loading immediately so queued device models show
+    // their "waiting" state instead of looking idle.
+    setLoadingMap((prev) => {
+      const next = { ...prev };
+      for (const m of selectedModels) next[m.id] = true;
+      return next;
+    });
+    await Promise.all([
+      Promise.all(cloud.map((m) => runOne(m))),
+      (async () => {
+        // On-device models share the same hardware — run one at a time.
+        for (const m of device) await runOne(m);
+      })(),
+    ]);
+  };
+
+  const handleRunAll = () => {
     if (!canRun) return;
-    await Promise.all(selectedIds.map(runOne));
+    const needDownload = selectedModels.filter(
+      (m) => m.runtime === "device" && !downloadedMap[m.id]
+    );
+    if (needDownload.length > 0) {
+      pendingRunRef.current = true;
+      setGateQueue(needDownload);
+      return;
+    }
+    void startAll();
+  };
+
+  const handleRetry = (model: Model) => {
+    if (model.runtime === "device" && !downloadedMap[model.id]) {
+      pendingRunRef.current = false;
+      setGateQueue([model]);
+      return;
+    }
+    void runOne(model);
+  };
+
+  const handleGateChange = (open: boolean) => {
+    if (open) return;
+    if (gateConfirmed.current) {
+      gateConfirmed.current = false;
+      setGateQueue((q) => {
+        const rest = q.slice(1);
+        if (rest.length === 0) {
+          if (pendingRunRef.current) {
+            pendingRunRef.current = false;
+            void startAll();
+          }
+        }
+        return rest;
+      });
+    } else {
+      // User backed out — cancel the whole run.
+      pendingRunRef.current = false;
+      setGateQueue([]);
+    }
   };
 
   const diff = useMemo(
@@ -369,9 +421,8 @@ function ComparePageContent() {
   const handleExport = (formatChoice: ExportFormat) => {
     const today = format(new Date(), "yyyy-MM-dd");
     if (formatChoice === "json") {
-      const json = buildJson(inputContent, inputType, selectedModels, results);
       downloadBlob(
-        json,
+        buildJson(inputContent, inputType, selectedModels, results),
         `neoscribe-comparison-${today}.json`,
         "application/json"
       );
@@ -379,17 +430,14 @@ function ComparePageContent() {
       return;
     }
     if (formatChoice === "markdown") {
-      const md = buildMarkdown(
-        inputContent,
-        inputType,
-        selectedModels,
-        results
+      downloadBlob(
+        buildMarkdown(inputContent, inputType, selectedModels, results),
+        `neoscribe-comparison-${today}.md`,
+        "text/markdown"
       );
-      downloadBlob(md, `neoscribe-comparison-${today}.md`, "text/markdown");
       toast.success("Exported as Markdown");
       return;
     }
-    // PDF via print dialog
     const previous = document.title;
     document.title = `neoscribe-comparison-${today}`;
     window.print();
@@ -398,39 +446,36 @@ function ComparePageContent() {
     }, 1000);
   };
 
-  const estimatedTotalS = ESTIMATED_S_PER_MODEL * selectedIds.length;
-  const exportDisabled = selectedModels.length === 0;
+  const cloudEstimate = selectedModels
+    .filter((m) => m.runtime === "cloud")
+    .reduce((s, m) => s + (m.typicalLatencyS ?? 5), 0);
+  const deviceCount = selectedModels.filter((m) => m.runtime === "device").length;
   const completedCount = selectedModels.filter((m) => !!results[m.id]).length;
+  const exportDisabled = completedCount === 0;
+
+  const runHint =
+    selectedIds.length < MIN_MODELS
+      ? `Pick at least ${MIN_MODELS} models to compare.`
+      : `${selectedIds.length} models` +
+        (cloudEstimate > 0 ? ` · cloud ≈${Math.max(5, Math.round(cloudEstimate * 1.2))}s` : "") +
+        (deviceCount > 0 ? ` · ${deviceCount} on-device (one at a time)` : "");
 
   return (
     <PageContainer
       title="Compare"
-      description="Run the same input across multiple models and see the differences side-by-side."
-      actions={
-        <ExportMenu disabled={exportDisabled} onExport={handleExport} />
-      }
+      description="Same input, several models — see what each catches and misses."
+      actions={<ExportMenu disabled={exportDisabled} onExport={handleExport} />}
     >
       <div className="flex flex-col gap-6">
         {/* Model selection */}
         <section className="flex flex-col gap-3 print:hidden">
           <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            Models to compare
+            Models to compare ({selectedIds.length}/{MAX_MODELS})
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            {selectedModels.length === 0 ? (
-              <p className="text-[13px] text-muted-foreground">
-                No models selected.
-              </p>
-            ) : (
-              selectedModels.map((m) => (
-                <ModelChip
-                  key={m.id}
-                  model={m}
-                  removable={selectedIds.length > 0}
-                  onRemove={() => handleRemove(m.id)}
-                />
-              ))
-            )}
+            {selectedModels.map((m) => (
+              <ModelChip key={m.id} model={m} onRemove={() => handleRemove(m.id)} />
+            ))}
             <Button
               size="sm"
               variant="outline"
@@ -441,28 +486,39 @@ function ComparePageContent() {
               Add model
             </Button>
           </div>
-          {selectedIds.length < MIN_MODELS ? (
-            <p className="text-[12px] text-muted-foreground">
-              Select at least {MIN_MODELS} models to enable Run.
-            </p>
-          ) : null}
         </section>
 
         {/* Shared input */}
         <section className="flex flex-col gap-3 print:hidden">
-          <Tabs
-            value={inputType}
-            onValueChange={(v) => setInputType(v as ChatInputType)}
-          >
-            <TabsList>
-              <TabsTrigger value="transcript">Transcript</TabsTrigger>
-              <TabsTrigger value="structured_note">Structured Note</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Tabs
+              value={inputType}
+              onValueChange={(v) => setInputType(v as ChatInputType)}
+            >
+              <TabsList>
+                <TabsTrigger value="transcript">Transcript</TabsTrigger>
+                <TabsTrigger value="structured_note">Structured Note</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {!inputContent.trim() ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground"
+                onClick={() => {
+                  const sample = SAMPLE_INPUTS[0];
+                  setInputType(sample.inputType);
+                  setInputContent(sample.content);
+                }}
+              >
+                Load a sample
+              </Button>
+            ) : null}
+          </div>
           <InputEditor
             value={inputContent}
             onChange={setInputContent}
-            minHeight={inputType === "transcript" ? 200 : 280}
+            minHeight={inputType === "transcript" ? 180 : 260}
             placeholder={PLACEHOLDERS[inputType]}
           />
           <div className="flex flex-wrap items-center gap-3">
@@ -471,9 +527,7 @@ function ComparePageContent() {
               Run on all models
             </Button>
             <span className="font-mono text-[12px] text-muted-foreground">
-              {selectedIds.length === 0
-                ? "Add models to enable Run."
-                : `Will run on ${selectedIds.length} model${selectedIds.length === 1 ? "" : "s"} (~${estimatedTotalS}s)`}
+              {runHint}
             </span>
             <div className="ml-auto flex items-center gap-2 rounded-md border border-border px-3 py-1">
               <Switch
@@ -497,9 +551,7 @@ function ComparePageContent() {
         {/* Print-only header for PDF export */}
         <section className="hidden print:flex print-stack flex-col gap-3">
           <h2 className="text-[18px] font-semibold">NeoScribe comparison</h2>
-          <p className="text-[12px] text-muted-foreground">
-            Input ({inputType}):
-          </p>
+          <p className="text-[12px] text-muted-foreground">Input ({inputType}):</p>
           <pre className="whitespace-pre-wrap rounded border border-border bg-background p-3 font-mono text-[11px]">
             {inputContent || "(empty)"}
           </pre>
@@ -513,7 +565,7 @@ function ComparePageContent() {
         ) : (
           <div
             className={cn(
-              "grid gap-4",
+              "grid grid-cols-1 gap-4",
               selectedModels.length === 2 ? "lg:grid-cols-2" : "lg:grid-cols-3"
             )}
           >
@@ -523,8 +575,9 @@ function ComparePageContent() {
                 model={m}
                 extraction={results[m.id] ?? null}
                 loading={!!loadingMap[m.id]}
-                error={errors[m.id] ?? null}
-                onRetry={() => runOne(m.id)}
+                error={errors[m.id]?.message ?? null}
+                errorDetails={errors[m.id]?.details}
+                onRetry={() => handleRetry(m)}
                 highlightDiffs={highlightDiffs}
                 itemAnnotations={diff.itemAnnotations[m.id]}
                 categoryAnnotations={diff.categoryAnnotations[m.id]}
@@ -537,12 +590,6 @@ function ComparePageContent() {
         {selectedModels.length >= MIN_MODELS ? (
           <CompareSummary models={selectedModels} results={results} />
         ) : null}
-
-        {completedCount > 0 && completedCount < selectedModels.length ? (
-          <p className="text-[12px] text-muted-foreground print:hidden">
-            {completedCount} of {selectedModels.length} models complete.
-          </p>
-        ) : null}
       </div>
 
       <AddModelDialog
@@ -551,6 +598,15 @@ function ComparePageContent() {
         models={models}
         excludeIds={selectedIds}
         onAdd={handleAdd}
+      />
+
+      <LocalModelGate
+        model={gateQueue[0] ?? null}
+        open={gateQueue.length > 0}
+        onOpenChange={handleGateChange}
+        onConfirm={() => {
+          gateConfirmed.current = true;
+        }}
       />
     </PageContainer>
   );

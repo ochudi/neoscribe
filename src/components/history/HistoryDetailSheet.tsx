@@ -13,24 +13,16 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ExtractionOutput } from "@/components/chat/ExtractionOutput";
-import {
-  matchStatsFor,
-  processingSecondsFor,
-  type HistoryEntry,
-} from "@/lib/stores/historyStore";
+import { RuntimeBadge } from "@/components/chat/shared";
+import type { RunSummary } from "@/lib/api/types";
 
 interface HistoryDetailSheetProps {
-  entry: HistoryEntry | null;
+  entry: RunSummary | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onOpenInChat: (entry: HistoryEntry) => void;
-  onCompare: (entry: HistoryEntry) => void;
-  onDelete: (entry: HistoryEntry) => void;
-}
-
-function formatTimestamp(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString();
+  onOpenInChat: (entry: RunSummary) => void;
+  onCompare: (entry: RunSummary) => void;
+  onDelete: (entry: RunSummary) => void;
 }
 
 export function HistoryDetailSheet({
@@ -50,19 +42,15 @@ export function HistoryDetailSheet({
         {entry ? (
           <>
             <SheetHeader className="border-b border-border px-6 pb-4 pt-6 text-left">
-              <SheetTitle className="text-[18px] font-semibold leading-tight">
+              <SheetTitle className="flex items-center gap-2 text-[18px] font-semibold leading-tight">
                 {entry.modelName}
+                <RuntimeBadge runtime={entry.runtime} />
               </SheetTitle>
               <SheetDescription className="font-mono text-[12px] text-muted-foreground">
-                {formatTimestamp(entry.savedAt)} ·{" "}
-                {entry.inputType === "transcript"
-                  ? "Transcript"
-                  : "Structured Note"}{" "}
-                · {processingSecondsFor(entry).toFixed(2)}s ·{" "}
-                {(() => {
-                  const { matched, total } = matchStatsFor(entry);
-                  return `${matched}/${total} matched`;
-                })()}
+                {new Date(entry.savedAt).toLocaleString()} ·{" "}
+                {entry.inputType === "transcript" ? "Transcript" : "Structured Note"}{" "}
+                · {(entry.durationMs / 1000).toFixed(2)}s · {entry.codedCount}/
+                {entry.itemCount} coded
               </SheetDescription>
             </SheetHeader>
 
@@ -83,7 +71,7 @@ export function HistoryDetailSheet({
 
                 <section className="flex flex-col gap-2">
                   <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                    Extraction
+                    Findings
                   </p>
                   <ExtractionOutput extraction={entry.extraction} />
                 </section>
@@ -91,21 +79,13 @@ export function HistoryDetailSheet({
             </ScrollArea>
 
             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-6 py-4">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onOpenInChat(entry)}
-              >
+              <Button size="sm" variant="outline" onClick={() => onOpenInChat(entry)}>
                 <MessageSquare className="h-3.5 w-3.5" />
-                Open in Chat
+                Open in Workspace
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onCompare(entry)}
-              >
+              <Button size="sm" variant="outline" onClick={() => onCompare(entry)}>
                 <Columns3 className="h-3.5 w-3.5" />
-                Compare with another model
+                Compare
               </Button>
               <Button
                 size="sm"

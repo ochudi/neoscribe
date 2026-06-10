@@ -1,7 +1,83 @@
 "use client";
 
 import Image from "next/image";
-import { Menu } from "lucide-react";
+import { Menu, Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+
+import { useModels } from "@/lib/hooks/useModels";
+import { cn } from "@/lib/utils";
+
+function ThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    return <span className="h-9 w-9" aria-hidden="true" />;
+  }
+
+  const isDark = resolvedTheme === "dark";
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
+  );
+}
+
+function StatusPill() {
+  const { cloudModels, isLoading, cloudError } = useModels();
+
+  const online = cloudModels.filter((m) => m.status === "online").length;
+  const total = cloudModels.length;
+
+  let dotClass = "bg-status-online";
+  let text = `${online}/${total} cloud models online`;
+  let shortText = "Online";
+
+  if (isLoading) {
+    dotClass = "bg-status-loading";
+    text = "Checking models…";
+    shortText = "…";
+  } else if (cloudError) {
+    dotClass = "bg-status-offline";
+    text = "Cloud models unreachable";
+    shortText = "Offline";
+  } else if (total > 0 && online < total) {
+    dotClass = "bg-status-loading";
+  }
+
+  return (
+    <div
+      className="flex items-center gap-2 rounded-full border border-border py-1 pl-2 pr-2 sm:px-3"
+      aria-label="Model availability"
+      title="Live availability of the cloud model catalog"
+    >
+      <span className="relative flex h-1.5 w-1.5">
+        <span
+          className={cn(
+            "absolute inline-flex h-full w-full animate-ping rounded-full opacity-40",
+            dotClass
+          )}
+        />
+        <span className={cn("relative inline-flex h-1.5 w-1.5 rounded-full", dotClass)} />
+      </span>
+      <span className="hidden font-mono text-[12px] text-foreground sm:inline">
+        {text}
+      </span>
+      <span className="font-mono text-[11px] text-foreground sm:hidden">
+        {shortText}
+      </span>
+    </div>
+  );
+}
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -34,34 +110,14 @@ export function Header({ onMenuClick }: HeaderProps) {
             NeoScribe
           </span>
           <span className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:mt-1">
-            v1.0.0 · Internal
+            Clinical AI playground
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div
-          className="flex items-center gap-2 rounded-full border border-border py-1 pl-2 pr-2 sm:px-3"
-          aria-label="System status"
-        >
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-online opacity-40" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-status-online" />
-          </span>
-          <span className="hidden font-mono text-[13px] text-foreground sm:inline">
-            All systems online
-          </span>
-          <span className="font-mono text-[11px] text-foreground sm:hidden">
-            Online
-          </span>
-        </div>
-
-        <div
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-foreground"
-          aria-label="User"
-        >
-          CO
-        </div>
+      <div className="flex items-center gap-1 sm:gap-2">
+        <StatusPill />
+        <ThemeToggle />
       </div>
     </header>
   );

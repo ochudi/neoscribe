@@ -1,78 +1,79 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import {
-  Copy,
-  Image as ImageIcon,
-  Mic,
-  Settings2,
-  Type,
-  type LucideIcon,
-} from "lucide-react";
+import { useState } from "react";
+import { ArrowUpRight, Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import type { Model, ModelCapability, ModelStatus } from "@/lib/api/mocks";
+import {
+  RuntimeBadge,
+  StatusDot,
+  statusLabel,
+} from "@/components/chat/shared";
+import { LocalModelGate } from "@/components/models/LocalModelGate";
+import { formatMb } from "@/lib/local/device";
+import {
+  ensureLoaded,
+  removeDownload,
+  useLocalEngineStore,
+} from "@/lib/local/engine";
+import type { Model } from "@/lib/api/types";
 
-const CAPABILITY_META: Record<
-  ModelCapability,
-  { icon: LucideIcon; label: string }
-> = {
-  text: { icon: Type, label: "Text" },
-  audio: { icon: Mic, label: "Audio" },
-  vision: { icon: ImageIcon, label: "Vision" },
-  function_calling: { icon: Settings2, label: "Functions" },
-};
-
-const STATUS_META: Record<ModelStatus, { color: string; label: string }> = {
-  online: { color: "bg-status-online", label: "Online" },
-  loading: { color: "bg-status-loading", label: "Loading" },
-  offline: { color: "bg-status-offline", label: "Offline" },
-};
-
-function formatMemory(sizeMb: number) {
-  if (sizeMb >= 1024) {
-    return `${(sizeMb / 1024).toFixed(1)} GB`;
+function DownloadProgress({ modelId }: { modelId: string }) {
+  const runtime = useLocalEngineStore((s) => s.states[modelId]);
+  if (!runtime?.progress) {
+    return (
+      <p className="font-mono text-[11px] text-muted-foreground">
+        Starting download…
+      </p>
+    );
   }
-  return `${sizeMb} MB`;
+  const { loadedMb, totalMb } = runtime.progress;
+  const pct = totalMb > 0 ? Math.min(100, Math.round((loadedMb / totalMb) * 100)) : 0;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full bg-foreground/70 transition-[width]"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="font-mono text-[11px] text-muted-foreground">
+        {formatMb(loadedMb)} of {formatMb(totalMb)} ({pct}%)
+      </p>
+    </div>
+  );
 }
 
-function relativeSeconds(iso: string, nowMs: number) {
-  const diff = Math.max(0, Math.floor((nowMs - new Date(iso).getTime()) / 1000));
-  if (diff < 60) return `Updated ${diff}s ago`;
-  if (diff < 3600) return `Updated ${Math.floor(diff / 60)}m ago`;
-  return `Updated ${Math.floor(diff / 3600)}h ago`;
-}
+export function ModelCard({ model }: { model: Model }) {
+  const [gateOpen, setGateOpen] = useState(false);
 
-function stripScheme(url: string) {
-  return url.replace(/^https?:\/\//, "");
-}
+  const isDevice = model.runtime === "device";
+  const runtime = useLocalEngineStore((s) => s.states[model.id]);
+  const downloaded = useLocalEngineStore((s) => !!s.downloaded[model.id]);
+  const busy =
+    runtime?.status === "downloading" ||
+    runtime?.status === "loading" ||
+    runtime?.status === "generating";
+  const unsupported = isDevice && model.status === "offline";
 
-interface ModelCardProps {
-  model: Model;
-}
-
-export function ModelCard({ model }: ModelCardProps) {
-  const [nowMs, setNowMs] = useState(() => Date.now());
-
-  useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const status = STATUS_META[model.status];
-  const isCloud = model.location === "cloud";
-
-  const handleCopyEndpoint = async () => {
-    const value = model.endpoint ?? model.id;
+  const startDownload = async (modelId: string) => {
     try {
-      await navigator.clipboard.writeText(value);
-      toast.success("Endpoint copied", { description: value });
-    } catch {
-      toast.error("Could not copy endpoint");
+      await ensureLoaded(modelId);
+      toast.success(`${model.name} is ready`, {
+        description: "Downloaded and loaded on this device.",
+      });
+    } catch (e) {
+      toast.error("Couldn't prepare the model", {
+        description: e instanceof Error ? e.message : String(e),
+      });
     }
+  };
+
+  const handleRemove = async () => {
+    await removeDownload(model.id);
+    toast.success(`${model.name} removed from this device`);
   };
 
   return (
@@ -81,80 +82,110 @@ export function ModelCard({ model }: ModelCardProps) {
         <h3 className="text-[16px] font-semibold leading-tight text-foreground">
           {model.name}
         </h3>
-        <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[11px] text-foreground">
+        <span className="shrink-0 rounded border border-border px-1.5 py-0.5 font-mono text-[11px] text-foreground">
           {model.sizeLabel}
         </span>
       </div>
 
-      <div className="flex items-center gap-3 px-4 pt-2 pb-4">
-        <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-foreground">
-          {model.location}
-        </span>
+      <div className="flex flex-wrap items-center gap-2 px-4 pb-3 pt-2">
+        <RuntimeBadge runtime={model.runtime} />
         <span className="font-mono text-[12px] text-muted-foreground">
           {model.provider}
         </span>
         <span className="ml-auto flex items-center gap-1.5">
-          <span
-            className={cn(
-              "h-1.5 w-1.5 rounded-full",
-              status.color,
-              model.status === "loading" && "animate-pulse"
-            )}
-          />
-          <span className="text-[13px] text-foreground">{status.label}</span>
+          <StatusDot status={model.status} />
+          <span className="text-[12px] text-foreground">{statusLabel(model)}</span>
         </span>
       </div>
 
       <div className="border-t border-border" />
 
-      <div className="flex flex-wrap gap-1.5 px-4 py-3">
-        {model.capabilities.map((cap) => {
-          const meta = CAPABILITY_META[cap];
-          const Icon = meta.icon;
-          return (
-            <span
-              key={cap}
-              className="inline-flex items-center gap-1 rounded border border-border bg-muted/40 px-1.5 py-0.5 text-[12px] text-foreground"
+      <p className="px-4 py-3 text-[13px] leading-relaxed text-muted-foreground">
+        {model.description}
+      </p>
+
+      <div className="flex flex-col gap-2 px-4 pb-3 text-[12px] text-muted-foreground">
+        {isDevice ? (
+          <span className="font-mono text-[11px]">
+            {model.downloadMb ? `${formatMb(model.downloadMb)} download` : ""}
+            {model.minRamGb ? ` · needs ~${model.minRamGb} GB RAM` : ""}
+            {" · runs in your browser"}
+          </span>
+        ) : (
+          <span className="font-mono text-[11px]">
+            {model.typicalLatencyS
+              ? `Typically ~${model.typicalLatencyS}s per extraction`
+              : ""}
+            {" · hosted via Hugging Face"}
+          </span>
+        )}
+        {isDevice && runtime?.status === "downloading" ? (
+          <DownloadProgress modelId={model.id} />
+        ) : null}
+        {unsupported && model.statusDetail ? (
+          <p className="rounded-md border border-status-offline/40 bg-status-offline/5 p-2 text-[12px] text-foreground">
+            {model.statusDetail}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-3">
+        {!unsupported ? (
+          <Button asChild size="sm">
+            <Link href={`/chat?model=${encodeURIComponent(model.id)}`}>
+              Try in Workspace
+            </Link>
+          </Button>
+        ) : null}
+        {!unsupported ? (
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/compare?model=${encodeURIComponent(model.id)}`}>
+              Compare
+            </Link>
+          </Button>
+        ) : null}
+
+        <span className="ml-auto flex items-center gap-1">
+          {isDevice && !downloaded && !busy && !unsupported ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setGateOpen(true)}
+              className="text-muted-foreground"
             >
-              <Icon className="h-3 w-3" />
-              {meta.label}
-            </span>
-          );
-        })}
+              <Download className="h-3.5 w-3.5" />
+              Download
+            </Button>
+          ) : null}
+          {isDevice && downloaded && !busy ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleRemove}
+              className="text-muted-foreground"
+              title="Delete the model files from this browser"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Remove
+            </Button>
+          ) : null}
+          {model.hfUrl ? (
+            <Button asChild size="sm" variant="ghost" className="text-muted-foreground">
+              <a href={model.hfUrl} target="_blank" rel="noreferrer">
+                Model card
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          ) : null}
+        </span>
       </div>
 
-      <div className="flex items-center justify-between gap-3 px-4 pb-3 text-[12px] text-muted-foreground">
-        <span className="min-w-0 truncate font-mono">
-          {isCloud
-            ? `Endpoint: ${model.endpoint ? stripScheme(model.endpoint) : "—"}`
-            : `Memory: ${model.sizeMb ? formatMemory(model.sizeMb) : "—"}`}
-        </span>
-        <span className="shrink-0 font-mono">
-          {relativeSeconds(model.lastCheckedAt, nowMs)}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-2 border-t border-border px-4 py-3">
-        <Button asChild size="sm">
-          <Link href={`/chat?model=${encodeURIComponent(model.id)}`}>
-            Open in Chat
-          </Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link href={`/compare?model=${encodeURIComponent(model.id)}`}>
-            Compare
-          </Link>
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="ml-auto"
-          onClick={handleCopyEndpoint}
-        >
-          <Copy className="h-3.5 w-3.5" />
-          Copy endpoint
-        </Button>
-      </div>
+      <LocalModelGate
+        model={model}
+        open={gateOpen}
+        onOpenChange={setGateOpen}
+        onConfirm={startDownload}
+      />
     </div>
   );
 }

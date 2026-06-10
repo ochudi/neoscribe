@@ -1,8 +1,8 @@
 import { create } from "zustand";
 
-import type { ExtractionResult } from "@/lib/api/mocks";
+import type { ExtractionResult, RunInputType } from "@/lib/api/types";
 
-export type ChatInputType = "transcript" | "structured_note";
+export type ChatInputType = RunInputType;
 
 export const LEFT_RAIL_KEY = "leftRail";
 export const RIGHT_RAIL_KEY = "rightRail";
@@ -14,6 +14,11 @@ interface ChatState {
   currentExtraction: ExtractionResult | null;
   isLoading: boolean;
   error: string | null;
+  errorDetails: string | null;
+  errorRetryable: boolean;
+  /** Raw streaming output while an on-device model generates. */
+  liveText: string;
+  liveTps: number | null;
   expandedSections: Record<string, boolean>;
 
   setSelectedModelId: (id: string) => void;
@@ -21,9 +26,14 @@ interface ChatState {
   setInputType: (type: ChatInputType) => void;
   setExtraction: (extraction: ExtractionResult | null) => void;
   setIsLoading: (isLoading: boolean) => void;
-  setError: (error: string | null) => void;
+  setError: (
+    error: string | null,
+    details?: string | null,
+    retryable?: boolean
+  ) => void;
+  appendLiveText: (chunk: string, tps: number) => void;
+  resetLive: () => void;
   toggleSection: (key: string) => void;
-  setSectionExpanded: (key: string, expanded: boolean) => void;
   clearInput: () => void;
 }
 
@@ -34,6 +44,10 @@ export const useChatStore = create<ChatState>((set) => ({
   currentExtraction: null,
   isLoading: false,
   error: null,
+  errorDetails: null,
+  errorRetryable: false,
+  liveText: "",
+  liveTps: null,
   expandedSections: {
     [LEFT_RAIL_KEY]: true,
     [RIGHT_RAIL_KEY]: true,
@@ -44,7 +58,11 @@ export const useChatStore = create<ChatState>((set) => ({
   setInputType: (type) => set({ inputType: type }),
   setExtraction: (extraction) => set({ currentExtraction: extraction }),
   setIsLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
+  setError: (error, details = null, retryable = false) =>
+    set({ error, errorDetails: details, errorRetryable: retryable }),
+  appendLiveText: (chunk, tps) =>
+    set((s) => ({ liveText: s.liveText + chunk, liveTps: tps })),
+  resetLive: () => set({ liveText: "", liveTps: null }),
 
   toggleSection: (key) =>
     set((state) => ({
@@ -52,10 +70,6 @@ export const useChatStore = create<ChatState>((set) => ({
         ...state.expandedSections,
         [key]: !state.expandedSections[key],
       },
-    })),
-  setSectionExpanded: (key, expanded) =>
-    set((state) => ({
-      expandedSections: { ...state.expandedSections, [key]: expanded },
     })),
   clearInput: () => set({ inputContent: "" }),
 }));

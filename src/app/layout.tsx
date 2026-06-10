@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -20,7 +21,7 @@ const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://neoscribe.vercel.app";
 
 const description =
-  "AI clinical documentation playground from Plural Health — compare models, inspect extractions, and ship faster than your differential.";
+  "AI clinical documentation playground from Plural Health — run transcripts through cloud and in-browser models, compare extractions side by side, and keep every run.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -39,7 +40,9 @@ export const metadata: Metadata = {
     "AI scribe",
     "Plural Health",
     "NeoScribe",
-    "MedGemma",
+    "on-device AI",
+    "WebGPU",
+    "Llama",
     "Qwen",
     "Gemma",
   ],
@@ -84,10 +87,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
-        <QueryProvider>
-          {children}
-          <Toaster />
-        </QueryProvider>
+        <ThemeProvider>
+          <QueryProvider>
+            {children}
+            <Toaster />
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

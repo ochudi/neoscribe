@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Check, ChevronsUpDown, FileText } from "lucide-react";
 
 import {
@@ -14,12 +13,12 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { StatusDot } from "@/components/chat/shared";
+import { RuntimeBadge, StatusDot, statusLabel } from "@/components/chat/shared";
 import { MetadataBody } from "@/components/chat/MetadataRail";
 import { cn } from "@/lib/utils";
-import { listModels } from "@/lib/api/client";
+import { useModels } from "@/lib/hooks/useModels";
 import { useChatStore } from "@/lib/stores/chatStore";
-import type { Model } from "@/lib/api/mocks";
+import type { Model } from "@/lib/api/types";
 
 function ModelRow({
   model,
@@ -35,21 +34,23 @@ function ModelRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex w-full items-center gap-2 rounded-md border px-3 py-2.5 text-left transition-colors",
+        "flex w-full flex-col gap-1 rounded-md border px-3 py-2.5 text-left transition-colors",
         active
           ? "border-foreground bg-muted text-foreground"
           : "border-border text-foreground hover:bg-muted/50"
       )}
     >
-      <StatusDot status={model.status} />
-      <span className="flex-1 truncate text-[14px]">{model.name}</span>
-      <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-        {model.location}
+      <span className="flex w-full items-center gap-2">
+        <StatusDot status={model.status} />
+        <span className="flex-1 truncate text-[14px]">{model.name}</span>
+        <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+          {model.sizeLabel}
+        </span>
+        {active ? <Check className="h-4 w-4 text-foreground" /> : null}
       </span>
-      <span className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-        {model.sizeLabel}
+      <span className="pl-3.5 text-[11px] text-muted-foreground">
+        {statusLabel(model)}
       </span>
-      {active ? <Check className="h-4 w-4 text-foreground" /> : null}
     </button>
   );
 }
@@ -62,21 +63,16 @@ export function MobileChatBar() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [metaOpen, setMetaOpen] = useState(false);
 
-  const { data } = useQuery({
-    queryKey: ["models"],
-    queryFn: listModels,
-    refetchInterval: 15_000,
-  });
-
-  const models = useMemo(() => data ?? [], [data]);
+  const { models } = useModels();
   const selected = models.find((m) => m.id === selectedModelId);
 
-  const grouped = useMemo(() => {
-    return {
-      cloud: models.filter((m) => m.location === "cloud"),
-      edge: models.filter((m) => m.location === "edge"),
-    };
-  }, [models]);
+  const grouped = useMemo(
+    () => ({
+      cloud: models.filter((m) => m.runtime === "cloud"),
+      device: models.filter((m) => m.runtime === "device"),
+    }),
+    [models]
+  );
 
   return (
     <div className="flex items-center gap-2 border-b border-border bg-background px-3 py-2 lg:hidden">
@@ -92,9 +88,7 @@ export function MobileChatBar() {
                 <span className="min-w-0 truncate text-foreground">
                   {selected.name}
                 </span>
-                <span className="ml-auto shrink-0 rounded border border-border px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
-                  {selected.sizeLabel}
-                </span>
+                <RuntimeBadge runtime={selected.runtime} className="ml-auto shrink-0" />
               </>
             ) : (
               <span className="text-muted-foreground">Select a model</span>
@@ -102,21 +96,26 @@ export function MobileChatBar() {
             <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           </button>
         </SheetTrigger>
-        <SheetContent side="bottom" className="max-h-[80vh] p-0">
+        <SheetContent side="bottom" className="max-h-[85vh] p-0">
           <SheetHeader className="border-b border-border p-4">
             <SheetTitle className="text-left text-[15px] font-medium">
               Choose a model
             </SheetTitle>
           </SheetHeader>
-          <ScrollArea className="max-h-[60vh]">
+          <ScrollArea className="max-h-[65vh]">
             <div className="flex flex-col gap-4 p-4">
-              {(["cloud", "edge"] as const).map((group) => {
+              {(
+                [
+                  ["cloud", "Cloud — hosted GPUs"],
+                  ["device", "On-device — runs in your browser, fully private"],
+                ] as const
+              ).map(([group, label]) => {
                 const items = grouped[group];
                 if (items.length === 0) return null;
                 return (
                   <div key={group} className="flex flex-col gap-2">
                     <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {group}
+                      {label}
                     </p>
                     <div className="flex flex-col gap-1.5">
                       {items.map((m) => (
@@ -138,7 +137,7 @@ export function MobileChatBar() {
                 href="/models"
                 className="inline-flex items-center gap-1 self-start py-2 text-[13px] text-muted-foreground hover:text-foreground"
               >
-                View all models
+                Browse all models
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -148,12 +147,7 @@ export function MobileChatBar() {
 
       <Sheet open={metaOpen} onOpenChange={setMetaOpen}>
         <SheetTrigger asChild>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={!extraction}
-            className="shrink-0"
-          >
+          <Button size="sm" variant="outline" disabled={!extraction} className="shrink-0">
             <FileText className="h-3.5 w-3.5" />
             Details
           </Button>
@@ -161,7 +155,7 @@ export function MobileChatBar() {
         <SheetContent side="right" className="w-[90vw] p-0 sm:w-[420px]">
           <SheetHeader className="border-b border-border p-4">
             <SheetTitle className="text-left text-[15px] font-medium">
-              Metadata
+              Run details
             </SheetTitle>
           </SheetHeader>
           <ScrollArea className="h-[calc(100vh-65px)]">

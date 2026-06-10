@@ -3,8 +3,8 @@
 import Link from "next/link";
 import {
   ArrowUpRight,
-  Clock,
   Columns3,
+  MonitorSmartphone,
   Play,
   type LucideIcon,
 } from "lucide-react";
@@ -53,20 +53,20 @@ export function Quickstart() {
         <QuickstartCard
           href="/chat"
           icon={Play}
-          title="Start a new extraction"
-          description="Paste a transcript and run it against a model."
+          title="Run an extraction"
+          description="Paste a transcript — or load a sample — and watch it become structured findings."
         />
         <QuickstartCard
           href="/compare"
           icon={Columns3}
           title="Compare models"
-          description="Run the same input across two or three models."
+          description="Same input, two or three models, side by side with differences highlighted."
         />
         <QuickstartCard
-          href="/history"
-          icon={Clock}
-          title="View history"
-          description="Browse past runs and their full extractions."
+          href="/models?runtime=device"
+          icon={MonitorSmartphone}
+          title="Go on-device"
+          description="Download a small model into your browser. Private by design — nothing leaves your machine."
         />
       </div>
     </section>

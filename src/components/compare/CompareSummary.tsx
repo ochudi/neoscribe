@@ -3,25 +3,16 @@
 import { useMemo } from "react";
 
 import { cn } from "@/lib/utils";
-import type { ExtractionItem, ExtractionResult, Model } from "@/lib/api/mocks";
 import {
-  EXTRACTION_CATEGORIES,
-} from "@/lib/constants";
+  flattenExtraction,
+  processingSeconds,
+  type ExtractionResult,
+  type Model,
+} from "@/lib/api/types";
 
 interface CompareSummaryProps {
   models: Model[];
   results: Record<string, ExtractionResult | null>;
-}
-
-function flatten(extraction: ExtractionResult): ExtractionItem[] {
-  return EXTRACTION_CATEGORIES.flatMap((c) => extraction.results[c] ?? []);
-}
-
-function processingSeconds(extraction: ExtractionResult) {
-  const ms =
-    new Date(extraction.completedAt).getTime() -
-    new Date(extraction.startedAt).getTime();
-  return Math.max(0, ms) / 1000;
 }
 
 function BarRow({
@@ -47,7 +38,7 @@ function BarRow({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="w-20 shrink-0 text-right font-mono text-[11px] text-muted-foreground">
+      <span className="w-24 shrink-0 text-right font-mono text-[11px] text-muted-foreground">
         {display}
       </span>
     </div>
@@ -74,9 +65,9 @@ function MetricBlock({
 interface ModelMetric {
   id: string;
   name: string;
-  matched: number;
+  coded: number;
   total: number;
-  matchRate: number;
+  codedRate: number;
   processingS: number | null;
   totalItems: number;
 }
@@ -102,22 +93,22 @@ export function CompareSummary({ models, results }: CompareSummaryProps) {
         return {
           id: m.id,
           name: m.name,
-          matched: 0,
+          coded: 0,
           total: 0,
-          matchRate: 0,
+          codedRate: 0,
           processingS: null,
           totalItems: 0,
         };
       }
-      const flat = flatten(extraction);
-      const matched = flat.filter((i) => i.matchStatus === "matched").length;
+      const flat = flattenExtraction(extraction);
+      const coded = flat.filter((i) => i.matchStatus === "matched").length;
       const total = flat.length;
       return {
         id: m.id,
         name: m.name,
-        matched,
+        coded,
         total,
-        matchRate: total === 0 ? 0 : matched / total,
+        codedRate: total === 0 ? 0 : coded / total,
         processingS: processingSeconds(extraction),
         totalItems: total,
       };
@@ -126,38 +117,29 @@ export function CompareSummary({ models, results }: CompareSummaryProps) {
 
   const allReady = metrics.every((m) => m.processingS !== null);
 
-  const maxRate = Math.max(0.0001, ...metrics.map((m) => m.matchRate));
-  const maxTime = Math.max(
-    0.0001,
-    ...metrics.map((m) => m.processingS ?? 0)
-  );
+  const maxRate = Math.max(0.0001, ...metrics.map((m) => m.codedRate));
+  const maxTime = Math.max(0.0001, ...metrics.map((m) => m.processingS ?? 0));
   const maxItems = Math.max(1, ...metrics.map((m) => m.totalItems));
 
-  const fastest = allReady
-    ? pickBest(metrics, (m) => m.processingS, "min")
-    : null;
-  const broadest = allReady
-    ? pickBest(metrics, (m) => m.totalItems, "max")
-    : null;
-  const bestMatch = allReady
-    ? pickBest(metrics, (m) => m.matchRate, "max")
-    : null;
+  const fastest = allReady ? pickBest(metrics, (m) => m.processingS, "min") : null;
+  const broadest = allReady ? pickBest(metrics, (m) => m.totalItems, "max") : null;
+  const bestCoder = allReady ? pickBest(metrics, (m) => m.codedRate, "max") : null;
 
   if (metrics.length === 0) return null;
 
   return (
     <div className="rounded-md border border-border bg-background px-4 py-4">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <MetricBlock title="Match rate">
+        <MetricBlock title="Coding rate">
           {metrics.map((m) => (
             <BarRow
               key={m.id}
               label={m.name}
-              value={m.matchRate}
+              value={m.codedRate}
               display={
                 m.processingS === null
                   ? "—"
-                  : `${m.matched}/${m.total} (${Math.round(m.matchRate * 100)}%)`
+                  : `${m.coded}/${m.total} (${Math.round(m.codedRate * 100)}%)`
               }
               max={maxRate}
             />
@@ -170,15 +152,13 @@ export function CompareSummary({ models, results }: CompareSummaryProps) {
               key={m.id}
               label={m.name}
               value={m.processingS ?? 0}
-              display={
-                m.processingS === null ? "—" : `${m.processingS.toFixed(2)}s`
-              }
+              display={m.processingS === null ? "—" : `${m.processingS.toFixed(2)}s`}
               max={maxTime}
             />
           ))}
         </MetricBlock>
 
-        <MetricBlock title="Total items">
+        <MetricBlock title="Findings extracted">
           {metrics.map((m) => (
             <BarRow
               key={m.id}
@@ -198,29 +178,25 @@ export function CompareSummary({ models, results }: CompareSummaryProps) {
         )}
       >
         <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-          Best for
+          Leaders
         </span>
-        {allReady && fastest && broadest && bestMatch ? (
+        {allReady && fastest && broadest && bestCoder ? (
           <>
             <span>
-              Speed:{" "}
+              Fastest:{" "}
               <span className="font-medium text-foreground">{fastest.name}</span>
             </span>
             <span>
-              Coverage:{" "}
-              <span className="font-medium text-foreground">
-                {broadest.name}
-              </span>
+              Most findings:{" "}
+              <span className="font-medium text-foreground">{broadest.name}</span>
             </span>
             <span>
-              Match rate:{" "}
-              <span className="font-medium text-foreground">
-                {bestMatch.name}
-              </span>
+              Best coding:{" "}
+              <span className="font-medium text-foreground">{bestCoder.name}</span>
             </span>
           </>
         ) : (
-          <span>Run the comparison to see leaders for each metric.</span>
+          <span>Run the comparison to see which model leads each metric.</span>
         )}
       </div>
     </div>

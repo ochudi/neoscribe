@@ -20,7 +20,7 @@ export interface HistoryFilters {
   modelIds: string[];
   dateFrom: string; // YYYY-MM-DD or ""
   dateTo: string;
-  minRate: number; // 0..100
+  minRate: number; // 0..100 — share of findings with a code
   maxRate: number;
 }
 
@@ -50,11 +50,7 @@ interface FiltersBarProps {
   modelOptions: Array<{ id: string; name: string }>;
 }
 
-export function FiltersBar({
-  filters,
-  onChange,
-  modelOptions,
-}: FiltersBarProps) {
+export function FiltersBar({ filters, onChange, modelOptions }: FiltersBarProps) {
   const update = (patch: Partial<HistoryFilters>) =>
     onChange({ ...filters, ...patch });
 
@@ -73,7 +69,7 @@ export function FiltersBar({
           <Input
             value={filters.search}
             onChange={(e) => update({ search: e.target.value })}
-            placeholder="Search input..."
+            placeholder="Search input text…"
             className="h-9 pl-8"
           />
         </div>
@@ -81,11 +77,7 @@ export function FiltersBar({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="sm" variant="outline" className="gap-1.5">
-              Models (
-              {filters.modelIds.length === 0
-                ? "All"
-                : filters.modelIds.length}
-              )
+              Models ({filters.modelIds.length === 0 ? "All" : filters.modelIds.length})
               <ChevronDown className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
@@ -125,7 +117,7 @@ export function FiltersBar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Label
             htmlFor="date-from"
             className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
@@ -139,7 +131,6 @@ export function FiltersBar({
             onChange={(e) => update({ dateFrom: e.target.value })}
             className="h-9 w-[140px]"
           />
-          <span className="text-muted-foreground">–</span>
           <Label
             htmlFor="date-to"
             className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
@@ -174,7 +165,7 @@ export function FiltersBar({
         <div className="flex min-w-[260px] flex-col gap-1">
           <div className="flex items-center justify-between text-[11px]">
             <span className="font-mono uppercase tracking-wider text-muted-foreground">
-              Match rate
+              Share of findings with a code
             </span>
             <span className="font-mono text-muted-foreground">
               {filters.minRate}% – {filters.maxRate}%
@@ -189,12 +180,9 @@ export function FiltersBar({
               value={filters.minRate}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                update({
-                  minRate: v,
-                  maxRate: Math.max(v, filters.maxRate),
-                });
+                update({ minRate: v, maxRate: Math.max(v, filters.maxRate) });
               }}
-              aria-label="Minimum match rate"
+              aria-label="Minimum coded share"
               className="h-1.5 w-full"
             />
             <input
@@ -205,12 +193,9 @@ export function FiltersBar({
               value={filters.maxRate}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                update({
-                  maxRate: v,
-                  minRate: Math.min(v, filters.minRate),
-                });
+                update({ maxRate: v, minRate: Math.min(v, filters.minRate) });
               }}
-              aria-label="Maximum match rate"
+              aria-label="Maximum coded share"
               className="h-1.5 w-full"
             />
           </div>

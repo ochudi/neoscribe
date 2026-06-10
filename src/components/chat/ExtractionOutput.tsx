@@ -13,31 +13,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
   CATEGORY_LABELS,
   EXTRACTION_CATEGORIES,
   type ExtractionCategory,
 } from "@/lib/constants";
-import type { ExtractionItem, ExtractionResult } from "@/lib/api/mocks";
-
-type SortMode = "order" | "category" | "match_status";
-
-const SORT_LABELS: Record<SortMode, string> = {
-  order: "Order",
-  category: "Category",
-  match_status: "Match status",
-};
+import type { ExtractionItem, ExtractionResult } from "@/lib/api/types";
 
 export interface ItemAnnotation {
   onlyInLabel?: string;
@@ -58,12 +40,7 @@ async function copyText(value: string, label: string) {
 }
 
 function itemToText(item: ExtractionItem) {
-  if (item.matchStatus === "matched") {
-    return item.matchedCode
-      ? `${item.text} (${item.matchedCode})`
-      : item.text;
-  }
-  return `${item.text} (no match)`;
+  return item.matchedCode ? `${item.text} (${item.matchedCode})` : item.text;
 }
 
 function sectionToText(category: ExtractionCategory, items: ExtractionItem[]) {
@@ -72,24 +49,16 @@ function sectionToText(category: ExtractionCategory, items: ExtractionItem[]) {
   return [header, ...items.map((i) => `- ${itemToText(i)}`)].join("\n");
 }
 
-function noMatchCount(items: ExtractionItem[]) {
+function uncodedCount(items: ExtractionItem[]) {
   return items.filter((i) => i.matchStatus === "no_match").length;
 }
 
 function defaultExpandedMap(
-  results: Record<ExtractionCategory, ExtractionItem[]>,
-  compact: boolean
+  results: Record<ExtractionCategory, ExtractionItem[]>
 ): Record<ExtractionCategory, boolean> {
   const next = {} as Record<ExtractionCategory, boolean>;
   for (const category of EXTRACTION_CATEGORIES) {
-    const items = results[category] ?? [];
-    if (items.length === 0) {
-      next[category] = false;
-    } else if (compact) {
-      next[category] = true;
-    } else {
-      next[category] = noMatchCount(items) > 0;
-    }
+    next[category] = (results[category] ?? []).length > 0;
   }
   return next;
 }
@@ -102,13 +71,12 @@ interface RowProps {
 }
 
 function ItemRow({ index, item, compact, annotation }: RowProps) {
-  const isMatched = item.matchStatus === "matched";
+  const isCoded = item.matchStatus === "matched";
   return (
     <div
       className={cn(
         "group/row flex items-start gap-3 text-foreground",
-        compact ? "px-3 py-1.5 text-[13px]" : "px-4 py-2 text-[14px]",
-        !isMatched && "border-l-2 border-dotted border-status-loading/70"
+        compact ? "px-3 py-1.5 text-[13px]" : "px-4 py-2 text-[14px]"
       )}
     >
       <span
@@ -132,24 +100,26 @@ function ItemRow({ index, item, compact, annotation }: RowProps) {
       </span>
 
       <span className="flex shrink-0 items-center gap-2 pt-0.5">
-        {isMatched ? (
-          <>
-            <Check className="h-3.5 w-3.5 text-status-online" />
-            {item.matchedCode ? (
-              <span className="font-mono text-[11px] text-muted-foreground">
-                {item.matchedCode}
-              </span>
-            ) : null}
-          </>
+        {isCoded ? (
+          <span
+            className="inline-flex items-center gap-1 rounded border border-status-online/30 bg-status-online/10 px-1.5 py-0.5 font-mono text-[11px] text-status-online"
+            title="Code suggested by the model — not yet validated"
+          >
+            <Check className="h-3 w-3" />
+            {item.matchedCode}
+          </span>
         ) : (
-          <span className="font-mono text-[11px] uppercase tracking-wider text-status-loading">
-            No_match
+          <span
+            className="font-mono text-[11px] text-muted-foreground"
+            title="The model did not suggest a clinical code for this finding"
+          >
+            no code
           </span>
         )}
         <button
           type="button"
           onClick={() => copyText(itemToText(item), "Item")}
-          className="opacity-0 transition-opacity hover:text-foreground group-hover/row:opacity-100 focus-visible:opacity-100 text-muted-foreground"
+          className="text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100"
           aria-label="Copy item"
         >
           <Copy className="h-3.5 w-3.5" />
@@ -179,16 +149,9 @@ function CategorySection({
   itemAnnotations,
 }: CategorySectionProps) {
   const isEmpty = items.length === 0;
-  const unmatched = noMatchCount(items);
-  const allMatched = !isEmpty && unmatched === 0;
+  const uncoded = uncodedCount(items);
+  const allCoded = !isEmpty && uncoded === 0;
   const highlight = !!categoryAnnotation?.highlight;
-
-  const headerClasses = cn(
-    "flex w-full items-center justify-between gap-3 text-left",
-    compact ? "px-3 py-2" : "px-4 py-3",
-    !isEmpty && "hover:bg-muted/40",
-    isEmpty && "cursor-default"
-  );
 
   return (
     <section
@@ -202,9 +165,13 @@ function CategorySection({
           type="button"
           onClick={isEmpty ? undefined : onToggle}
           aria-expanded={expanded}
-          aria-disabled={isEmpty || undefined}
           disabled={isEmpty}
-          className={headerClasses}
+          className={cn(
+            "flex w-full items-center justify-between gap-3 text-left",
+            compact ? "px-3 py-2" : "px-4 py-3",
+            !isEmpty && "hover:bg-muted/40",
+            isEmpty && "cursor-default"
+          )}
         >
           <span className="flex min-w-0 items-center gap-2">
             <ChevronDown
@@ -216,10 +183,9 @@ function CategorySection({
             />
             <span
               className={cn(
-                "leading-tight font-semibold",
+                "font-semibold leading-tight",
                 compact ? "text-[13px]" : "text-[14px]",
-                isEmpty ? "text-muted-foreground" : "text-foreground",
-                highlight && "font-bold"
+                isEmpty ? "text-muted-foreground" : "text-foreground"
               )}
             >
               {CATEGORY_LABELS[category]}
@@ -235,7 +201,7 @@ function CategorySection({
             </span>
             {categoryAnnotation?.perModelCounts &&
             categoryAnnotation.perModelCounts.length > 0 ? (
-              <span className="font-mono text-[10px] text-muted-foreground">
+              <span className="hidden font-mono text-[10px] text-muted-foreground sm:inline">
                 ·{" "}
                 {categoryAnnotation.perModelCounts
                   .map((c) => `${c.label}:${c.count}`)
@@ -245,18 +211,20 @@ function CategorySection({
           </span>
 
           {!isEmpty ? (
-            allMatched ? (
-              <span className="flex items-center gap-1 text-[12px] text-status-online">
+            allCoded ? (
+              <span className="flex shrink-0 items-center gap-1 text-[12px] text-status-online">
                 <Check className="h-3.5 w-3.5" />
-                All matched
+                All coded
               </span>
             ) : (
-              <span className="text-[12px] text-status-loading">
-                {unmatched} unmatched
+              <span className="shrink-0 text-[12px] text-muted-foreground">
+                {uncoded} without code
               </span>
             )
           ) : (
-            <span className="text-[12px] text-muted-foreground">No items</span>
+            <span className="shrink-0 text-[12px] text-muted-foreground">
+              None found
+            </span>
           )}
         </button>
 
@@ -265,10 +233,9 @@ function CategorySection({
             size="sm"
             variant="ghost"
             className="mr-2 shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              copyText(sectionToText(category, items), CATEGORY_LABELS[category]);
-            }}
+            onClick={() =>
+              copyText(sectionToText(category, items), CATEGORY_LABELS[category])
+            }
             aria-label={`Copy all ${CATEGORY_LABELS[category]} items`}
           >
             <Copy className="h-3.5 w-3.5" />
@@ -296,9 +263,7 @@ function CategorySection({
 interface ExtractionOutputProps {
   extraction: ExtractionResult;
   compact?: boolean;
-  /** Per-category annotations keyed by ExtractionCategory. */
   categoryAnnotations?: Partial<Record<ExtractionCategory, CategoryAnnotation>>;
-  /** Per-item annotations keyed by item.id. */
   itemAnnotations?: Record<string, ItemAnnotation>;
 }
 
@@ -310,55 +275,37 @@ export function ExtractionOutput({
 }: ExtractionOutputProps) {
   const [expandedMap, setExpandedMap] = useState<
     Record<ExtractionCategory, boolean>
-  >(() => defaultExpandedMap(extraction.results, compact));
-  const [onlyNoMatch, setOnlyNoMatch] = useState(false);
-  const [sortMode, setSortMode] = useState<SortMode>("order");
+  >(() => defaultExpandedMap(extraction.results));
+  const [onlyUncoded, setOnlyUncoded] = useState(false);
 
   useEffect(() => {
-    setExpandedMap(defaultExpandedMap(extraction.results, compact));
-  }, [extraction.startedAt, extraction.results, compact]);
-
-  const orderedCategories = useMemo<ExtractionCategory[]>(() => {
-    const base = [...EXTRACTION_CATEGORIES];
-    if (sortMode === "order" || compact) return base;
-    if (sortMode === "category") {
-      return base.sort((a, b) =>
-        CATEGORY_LABELS[a].localeCompare(CATEGORY_LABELS[b])
-      );
-    }
-    return base.sort((a, b) => {
-      const ia = extraction.results[a] ?? [];
-      const ib = extraction.results[b] ?? [];
-      const emptyA = ia.length === 0 ? 1 : 0;
-      const emptyB = ib.length === 0 ? 1 : 0;
-      if (emptyA !== emptyB) return emptyA - emptyB;
-      const diff = noMatchCount(ib) - noMatchCount(ia);
-      if (diff !== 0) return diff;
-      return EXTRACTION_CATEGORIES.indexOf(a) - EXTRACTION_CATEGORIES.indexOf(b);
-    });
-  }, [sortMode, compact, extraction.results]);
+    setExpandedMap(defaultExpandedMap(extraction.results));
+    setOnlyUncoded(false);
+  }, [extraction.startedAt, extraction.results]);
 
   const visibleSections = useMemo(() => {
-    return orderedCategories
-      .map((category) => {
-        const all = extraction.results[category] ?? [];
-        const items =
-          onlyNoMatch && !compact
-            ? all.filter((i) => i.matchStatus === "no_match")
-            : all;
-        return { category, items, originalCount: all.length };
-      })
-      .filter(({ items, originalCount }) => {
-        if (compact) return originalCount >= 0;
-        if (onlyNoMatch) return items.length > 0;
-        return originalCount >= 0;
-      });
-  }, [orderedCategories, extraction.results, onlyNoMatch, compact]);
+    return EXTRACTION_CATEGORIES.map((category) => {
+      const all = extraction.results[category] ?? [];
+      const items =
+        onlyUncoded && !compact
+          ? all.filter((i) => i.matchStatus === "no_match")
+          : all;
+      return { category, items, originalCount: all.length };
+    }).filter(({ items }) => !onlyUncoded || compact || items.length > 0);
+  }, [extraction.results, onlyUncoded, compact]);
 
   const expandableCategories = useMemo(
     () =>
       EXTRACTION_CATEGORIES.filter(
         (c) => (extraction.results[c] ?? []).length > 0
+      ),
+    [extraction.results]
+  );
+
+  const anyUncoded = useMemo(
+    () =>
+      EXTRACTION_CATEGORIES.some((c) =>
+        (extraction.results[c] ?? []).some((i) => i.matchStatus === "no_match")
       ),
     [extraction.results]
   );
@@ -379,84 +326,38 @@ export function ExtractionOutput({
     <div className={cn("flex flex-col", compact ? "gap-2" : "gap-4")}>
       {!compact ? (
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setAllExpanded(true)}
-          >
+          <Button size="sm" variant="ghost" onClick={() => setAllExpanded(true)}>
             <ChevronsUpDown className="h-3.5 w-3.5" />
             Expand all
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setAllExpanded(false)}
-          >
+          <Button size="sm" variant="ghost" onClick={() => setAllExpanded(false)}>
             <ChevronsDownUp className="h-3.5 w-3.5" />
             Collapse all
           </Button>
 
-          <div className="ml-auto flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 rounded-md border border-border px-3 py-1">
+          {anyUncoded ? (
+            <div className="ml-auto flex items-center gap-2 rounded-md border border-border px-3 py-1">
               <Switch
-                id="only-no-match"
-                checked={onlyNoMatch}
-                onCheckedChange={setOnlyNoMatch}
+                id="only-uncoded"
+                checked={onlyUncoded}
+                onCheckedChange={setOnlyUncoded}
               />
               <Label
-                htmlFor="only-no-match"
+                htmlFor="only-uncoded"
                 className="cursor-pointer text-[13px] text-foreground"
               >
-                Show only NO_MATCH
+                Only findings without a code
               </Label>
             </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline">
-                  Sort: {SORT_LABELS[sortMode]}
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Sort by
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuRadioGroup
-                  value={sortMode}
-                  onValueChange={(v) => setSortMode(v as SortMode)}
-                >
-                  <DropdownMenuRadioItem value="order">
-                    Order
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="category">
-                    Category
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="match_status">
-                    Match status
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={() => {
-                    setSortMode("order");
-                    setOnlyNoMatch(false);
-                    setExpandedMap(defaultExpandedMap(extraction.results, false));
-                  }}
-                >
-                  Reset view
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          ) : null}
         </div>
       ) : null}
 
       <div className="flex flex-col gap-3">
         {visibleSections.length === 0 ? (
           <div className="rounded-md border border-border bg-background px-4 py-8 text-center text-[13px] text-muted-foreground">
-            No items match the current filter.
+            Every finding got a code suggestion — nothing to show with this
+            filter on.
           </div>
         ) : (
           visibleSections.map(({ category, items }) => (

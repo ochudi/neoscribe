@@ -74,7 +74,7 @@ export function SidebarFooter() {
   return (
     <div className="mt-auto p-3">
       <p className="font-mono text-[11px] text-muted-foreground">
-        Powered by FastAPI · Vercel
+        Hugging Face · Supabase · Vercel
       </p>
     </div>
   );

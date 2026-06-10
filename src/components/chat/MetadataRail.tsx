@@ -16,9 +16,12 @@ import { useChatStore, RIGHT_RAIL_KEY } from "@/lib/stores/chatStore";
 import {
   CATEGORY_LABELS,
   EXTRACTION_CATEGORIES,
-  type ExtractionCategory,
 } from "@/lib/constants";
-import type { ExtractionItem, ExtractionResult } from "@/lib/api/mocks";
+import {
+  flattenExtraction,
+  processingSeconds,
+  type ExtractionResult,
+} from "@/lib/api/types";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -28,25 +31,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function processingSeconds(extraction: ExtractionResult) {
-  const ms =
-    new Date(extraction.completedAt).getTime() -
-    new Date(extraction.startedAt).getTime();
-  return Math.max(0, ms) / 1000;
-}
-
-function flattenItems(extraction: ExtractionResult): ExtractionItem[] {
-  return EXTRACTION_CATEGORIES.flatMap((c) => extraction.results[c] ?? []);
-}
-
-function MatchBar({
-  matched,
-  total,
-}: {
-  matched: number;
-  total: number;
-}) {
-  const pct = total === 0 ? 0 : Math.round((matched / total) * 100);
+function CodedBar({ coded, total }: { coded: number; total: number }) {
+  const pct = total === 0 ? 0 : Math.round((coded / total) * 100);
   return (
     <div className="flex flex-col gap-1.5">
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -56,7 +42,7 @@ function MatchBar({
         />
       </div>
       <p className="font-mono text-[11px] text-muted-foreground">
-        {matched} matched · {total - matched} no match · {total} total
+        {coded} coded · {total - coded} uncoded · {total} findings
       </p>
     </div>
   );
@@ -67,15 +53,10 @@ function PerSection({ extraction }: { extraction: ExtractionResult }) {
     <div className="flex flex-col gap-1.5">
       {EXTRACTION_CATEGORIES.map((category) => {
         const items = extraction.results[category] ?? [];
-        const matched = items.filter(
-          (i) => i.matchStatus === "matched"
-        ).length;
+        const coded = items.filter((i) => i.matchStatus === "matched").length;
         const isEmpty = items.length === 0;
         return (
-          <div
-            key={category}
-            className="flex items-center justify-between gap-2"
-          >
+          <div key={category} className="flex items-center justify-between gap-2">
             <span
               className={
                 isEmpty
@@ -86,7 +67,7 @@ function PerSection({ extraction }: { extraction: ExtractionResult }) {
               {CATEGORY_LABELS[category]}
             </span>
             <span className="font-mono text-[11px] text-muted-foreground">
-              {isEmpty ? "—" : `${matched}/${items.length}`}
+              {isEmpty ? "—" : `${coded}/${items.length} coded`}
             </span>
           </div>
         );
@@ -110,35 +91,13 @@ function buildMarkdown(extraction: ExtractionResult) {
       lines.push("_No items extracted._");
     } else {
       for (const item of items) {
-        const tag = item.matchStatus === "matched" ? "matched" : "no_match";
-        const code = item.matchedCode ? ` (${item.matchedCode})` : "";
-        lines.push(`- [${tag}] ${item.text}${code}`);
+        const code = item.matchedCode ? ` — ${item.matchedCode}` : "";
+        lines.push(`- ${item.text}${code}`);
       }
     }
     lines.push("");
   }
   return lines.join("\n");
-}
-
-function buildTable(extraction: ExtractionResult) {
-  const header = "category\titem_id\tmatch\tcode\tconfidence\ttext";
-  const rows: string[] = [];
-  for (const category of EXTRACTION_CATEGORIES) {
-    const items = extraction.results[category] ?? [];
-    for (const item of items) {
-      rows.push(
-        [
-          category,
-          item.id,
-          item.matchStatus,
-          item.matchedCode ?? "",
-          item.confidence?.toFixed(2) ?? "",
-          item.text.replace(/\t/g, " "),
-        ].join("\t")
-      );
-    }
-  }
-  return [header, ...rows].join("\n");
 }
 
 async function copyToClipboard(value: string, label: string) {
@@ -197,14 +156,15 @@ export function MetadataBody({
 
   if (!extraction) {
     return (
-      <div className="px-4 py-6 text-[12px] text-muted-foreground">
-        Metadata will appear after an extraction completes.
+      <div className="px-4 py-6 text-[12px] leading-relaxed text-muted-foreground">
+        Run an extraction to see timing, coding coverage, and export options
+        here.
       </div>
     );
   }
 
-  const allItems = flattenItems(extraction);
-  const matched = allItems.filter((i) => i.matchStatus === "matched").length;
+  const allItems = flattenExtraction(extraction);
+  const coded = allItems.filter((i) => i.matchStatus === "matched").length;
   const total = allItems.length;
 
   return (
@@ -218,8 +178,12 @@ export function MetadataBody({
         </div>
 
         <div className="flex flex-col gap-2">
-          <SectionLabel>Match summary</SectionLabel>
-          <MatchBar matched={matched} total={total} />
+          <SectionLabel>Code suggestions</SectionLabel>
+          <CodedBar coded={coded} total={total} />
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Codes are suggested by the model (ICD-10 / SNOMED / RxNorm) and are
+            not validated against a terminology server.
+          </p>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -228,7 +192,7 @@ export function MetadataBody({
         </div>
 
         <div className="flex flex-col gap-2">
-          <SectionLabel>Actions</SectionLabel>
+          <SectionLabel>Export</SectionLabel>
           <Button
             size="sm"
             variant="outline"
@@ -258,23 +222,10 @@ export function MetadataBody({
             <Copy className="h-3.5 w-3.5" />
             Copy as Markdown
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => copyToClipboard(buildTable(extraction), "Table")}
-            className="justify-start"
-          >
-            <Copy className="h-3.5 w-3.5" />
-            Copy as table
-          </Button>
         </div>
       </div>
 
-      <RawJsonDialog
-        open={rawOpen}
-        onOpenChange={setRawOpen}
-        extraction={extraction}
-      />
+      <RawJsonDialog open={rawOpen} onOpenChange={setRawOpen} extraction={extraction} />
     </>
   );
 }
@@ -293,7 +244,7 @@ export function MetadataRail() {
           type="button"
           onClick={() => toggleSection(RIGHT_RAIL_KEY)}
           className="flex h-9 w-full items-center justify-center text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-          aria-label="Expand metadata rail"
+          aria-label="Expand details rail"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -304,12 +255,12 @@ export function MetadataRail() {
   return (
     <aside className="hidden w-80 shrink-0 flex-col border-l border-border bg-background lg:flex">
       <div className="flex items-center justify-between px-4 pt-4">
-        <SectionLabel>Metadata</SectionLabel>
+        <SectionLabel>Run details</SectionLabel>
         <button
           type="button"
           onClick={() => toggleSection(RIGHT_RAIL_KEY)}
           className="text-muted-foreground hover:text-foreground"
-          aria-label="Collapse metadata rail"
+          aria-label="Collapse details rail"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -321,6 +272,3 @@ export function MetadataRail() {
     </aside>
   );
 }
-
-// Exported so other modules can reuse the same category-aware traversal.
-export type { ExtractionCategory };
