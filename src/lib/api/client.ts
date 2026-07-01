@@ -85,6 +85,23 @@ export async function extractWithCloudModel(
   );
 }
 
+/** Raw clinical-note output from a cloud model; the client parses `content`. */
+export interface CloudNoteResponse {
+  content: string;
+  startedAt: string;
+  completedAt: string;
+}
+
+export async function generateCloudNote(
+  id: string,
+  payload: ExtractionPayload
+): Promise<CloudNoteResponse> {
+  return request<CloudNoteResponse>(
+    `/v1/models/${encodeURIComponent(id)}/note`,
+    { method: "POST", body: JSON.stringify(payload) }
+  );
+}
+
 export async function listRuns(limit = 200): Promise<RunSummary[]> {
   return request<RunSummary[]>(`/v1/runs?limit=${limit}`);
 }

@@ -6,6 +6,7 @@ import {
   Boxes,
   Clock,
   Columns3,
+  FileText,
   LayoutGrid,
   MessageSquare,
   type LucideIcon,
@@ -21,6 +22,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutGrid },
+  { href: "/scribe", label: "Scribe", icon: FileText },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/compare", label: "Compare", icon: Columns3 },
   { href: "/models", label: "Models", icon: Boxes },

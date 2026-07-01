@@ -210,6 +210,39 @@ ${transcript}
 JSON:`;
 }
 
+// Mirror of src/lib/notes/prompt.ts — keep the two in sync.
+function buildNotePrompt(transcript: string) {
+  return `You are an experienced clinical scribe. Read the consultation below (a clinician-patient conversation or rough clinical note) and write a clean, well-structured clinical note.
+
+Return ONLY a JSON object (no commentary, no markdown fences) with exactly this shape:
+{
+  "patientSummary": string,
+  "presentingComplaints": string[],
+  "history": string,
+  "pastHistory": string,
+  "medications": string[],
+  "socialFamilyHistory": string,
+  "examination": { "general": string, "vitals": [{ "label": string, "value": string }], "systems": [{ "name": string, "findings": string }] },
+  "investigations": string[],
+  "assessment": string,
+  "plan": string[],
+  "recommendations": string[]
+}
+
+Rules:
+- Write prose fields ("history", "pastHistory", "socialFamilyHistory", "assessment") as clear professional sentences.
+- Expand medical shorthand into plain English (e.g. "6/52" -> "6 weeks", "O/E" -> "on examination", "r/o" -> "rule out").
+- Only include what the consultation supports. Do not invent findings. Use "" for empty prose fields and [] for empty lists.
+- "recommendations" is your own suggested next steps, separate from what the clinician already planned.
+
+Consultation:
+"""
+${transcript}
+"""
+
+JSON:`;
+}
+
 function extractJsonBlock(text: string): Record<string, unknown> | null {
   const cleaned = text.replace(/```(?:json)?/gi, "");
   const match = cleaned.match(/\{[\s\S]*\}/);
@@ -320,7 +353,11 @@ function hfErrorMessage(status: number): { message: string; retryable: boolean }
   }
 }
 
-async function callHuggingFace(model: ModelDef, transcript: string) {
+async function callHuggingFace(
+  model: ModelDef,
+  prompt: string,
+  maxTokens = 1400
+) {
   const doFetch = () =>
     fetch("https://router.huggingface.co/v1/chat/completions", {
       method: "POST",
@@ -330,8 +367,8 @@ async function callHuggingFace(model: ModelDef, transcript: string) {
       },
       body: JSON.stringify({
         model: model.hf_id,
-        messages: [{ role: "user", content: buildPrompt(transcript) }],
-        max_tokens: 1400,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: maxTokens,
         temperature: 0.1,
       }),
       signal: AbortSignal.timeout(60_000),
@@ -505,7 +542,7 @@ Deno.serve(async (req) => {
 
       let hfRes: Response;
       try {
-        hfRes = await callHuggingFace(model, transcript);
+        hfRes = await callHuggingFace(model, buildPrompt(transcript));
       } catch (e) {
         const isTimeout = e instanceof Error && e.name === "TimeoutError";
         return errorJson(
@@ -567,6 +604,76 @@ Deno.serve(async (req) => {
       }
 
       return json({ ...extraction, runId });
+    }
+
+    // Clinical note generation — returns the model's raw note JSON as `content`;
+    // the client parses and renders it.
+    const noteMatch = path.match(/^\/models\/([^/]+)\/note$/);
+    if (req.method === "POST" && noteMatch) {
+      if (!HF_TOKEN) {
+        return errorJson(
+          500,
+          "The server is missing its Hugging Face token, so cloud models can't run. The site owner needs to configure HF_TOKEN."
+        );
+      }
+
+      const id = decodeURIComponent(noteMatch[1]);
+      const model = MODELS.find((m) => m.id === id);
+      if (!model) {
+        return errorJson(
+          404,
+          `"${id}" isn't a known cloud model. Refresh the page to load the current model list.`
+        );
+      }
+
+      let body: { transcript?: string };
+      try {
+        body = await req.json();
+      } catch {
+        return errorJson(400, "The request body wasn't valid JSON.");
+      }
+      const transcript = (body.transcript ?? "").trim();
+      if (!transcript) {
+        return errorJson(400, "Add a transcript or note first — the input was empty.");
+      }
+      if (transcript.length > MAX_INPUT_CHARS) {
+        return errorJson(
+          413,
+          `That input is too long (${transcript.length.toLocaleString()} characters). Keep it under ${MAX_INPUT_CHARS.toLocaleString()}.`
+        );
+      }
+
+      const startedAt = new Date().toISOString();
+
+      let hfRes: Response;
+      try {
+        hfRes = await callHuggingFace(model, buildNotePrompt(transcript), 2000);
+      } catch (e) {
+        const isTimeout = e instanceof Error && e.name === "TimeoutError";
+        return errorJson(
+          504,
+          isTimeout
+            ? "The model took more than a minute to respond, so we stopped waiting. Try again — a fresh request is usually faster."
+            : "We couldn't reach the inference provider. Check your connection and try again.",
+          { details: e instanceof Error ? e.message : String(e), retryable: true }
+        );
+      }
+
+      if (!hfRes.ok) {
+        const text = await hfRes.text();
+        console.error(`HF note ${model.hf_id} -> ${hfRes.status}: ${text.slice(0, 400)}`);
+        const { message, retryable } = hfErrorMessage(hfRes.status);
+        return errorJson(hfRes.status >= 500 ? 502 : hfRes.status, message, {
+          details: text,
+          retryable,
+        });
+      }
+
+      const data = await hfRes.json();
+      const content: string =
+        data?.choices?.[0]?.message?.content ?? data?.choices?.[0]?.text ?? "";
+      const completedAt = new Date().toISOString();
+      return json({ content, startedAt, completedAt });
     }
 
     if (path === "/runs" && req.method === "POST") {
