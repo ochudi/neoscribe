@@ -58,6 +58,20 @@ export interface ClinicalNote {
   noteId?: string;
 }
 
+/** A persisted note as returned by the API. */
+export interface SavedNote {
+  id: string;
+  savedAt: string;
+  modelId: string;
+  modelName: string;
+  runtime: ModelRuntime;
+  /** How the transcript was captured. */
+  source: "recorded" | "pasted";
+  inputType: string;
+  transcript: string;
+  note: ClinicalNote;
+}
+
 /** True when a note carries any clinically meaningful content. */
 export function noteHasContent(note: ClinicalNote): boolean {
   return (

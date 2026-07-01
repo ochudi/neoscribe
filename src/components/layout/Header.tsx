@@ -5,6 +5,7 @@ import { Menu, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
+import { UserMenu } from "@/components/layout/UserMenu";
 import { useModels } from "@/lib/hooks/useModels";
 import { cn } from "@/lib/utils";
 
@@ -118,6 +119,7 @@ export function Header({ onMenuClick }: HeaderProps) {
       <div className="flex items-center gap-1 sm:gap-2">
         <StatusPill />
         <ThemeToggle />
+        <UserMenu />
       </div>
     </header>
   );

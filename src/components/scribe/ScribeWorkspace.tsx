@@ -8,11 +8,15 @@ import {
   CircleAlert,
   Copy,
   FileText,
+  Loader2,
   RotateCw,
+  Save,
   Sparkles,
   Square,
   Trash2,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,10 +31,11 @@ import {
 import { InputEditor } from "@/components/chat/InputEditor";
 import { LocalModelGate } from "@/components/models/LocalModelGate";
 import { ModelPicker } from "@/components/scribe/ModelPicker";
+import { RecorderPanel } from "@/components/scribe/RecorderPanel";
 import { NoteDocument } from "@/components/scribe/NoteDocument";
 import { NoteExportMenu } from "@/components/scribe/NoteExportMenu";
 import { cn } from "@/lib/utils";
-import { ApiError } from "@/lib/api/client";
+import { ApiError, saveNote } from "@/lib/api/client";
 import { useModels } from "@/lib/hooks/useModels";
 import { formatMb } from "@/lib/local/device";
 import { interrupt, useLocalEngineStore } from "@/lib/local/engine";
@@ -265,7 +270,11 @@ export function ScribeWorkspace({ initialModelId }: { initialModelId?: string })
 
   const [gateOpen, setGateOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [source, setSource] = useState<"recorded" | "pasted">("pasted");
+  const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
   const { models } = useModels();
   const selectedModel = models.find((m) => m.id === selectedModelId);
   const isDevice = selectedModel?.runtime === "device";
@@ -296,6 +305,7 @@ export function ScribeWorkspace({ initialModelId }: { initialModelId?: string })
     setIsLoading(true);
     setError(null);
     setNote(null);
+    setSavedId(null);
     resetLive();
     try {
       const res = await generateNote(selectedModel, transcript, inputType, {
@@ -343,8 +353,43 @@ export function ScribeWorkspace({ initialModelId }: { initialModelId?: string })
     if (!sample) return;
     setInputType(sample.inputType);
     setTranscript(sample.content);
+    setSource("pasted");
     setNote(null);
     setError(null);
+  };
+
+  const handleRecordedTranscript = (text: string) => {
+    setInputType("transcript");
+    setNote(null);
+    setError(null);
+    setSource("recorded");
+    const existing = transcript.trim();
+    setTranscript(existing ? `${existing}\n\n${text}` : text);
+  };
+
+  const handleSave = async () => {
+    if (!note || saving || savedId) return;
+    setSaving(true);
+    try {
+      const saved = await saveNote({
+        modelId: note.modelId,
+        modelName: note.modelName,
+        runtime: note.runtime,
+        source,
+        transcript,
+        inputType,
+        note,
+      });
+      setSavedId(saved.id);
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      toast.success("Saved to your notes.");
+    } catch (e) {
+      toast.error(
+        e instanceof ApiError ? e.message : "Couldn't save this note. Try again."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const copyNote = async () => {
@@ -368,6 +413,10 @@ export function ScribeWorkspace({ initialModelId }: { initialModelId?: string })
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       {/* Transcript / input */}
       <section className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3 sm:p-4 print:hidden">
+        <RecorderPanel
+          onTranscript={handleRecordedTranscript}
+          disabled={isLoading}
+        />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Tabs
             value={inputType}
@@ -405,7 +454,10 @@ export function ScribeWorkspace({ initialModelId }: { initialModelId?: string })
 
         <InputEditor
           value={transcript}
-          onChange={setTranscript}
+          onChange={(v) => {
+            setTranscript(v);
+            setSource("pasted");
+          }}
           minHeight={300}
           placeholder={PLACEHOLDER}
         />
@@ -454,7 +506,22 @@ export function ScribeWorkspace({ initialModelId }: { initialModelId?: string })
             Clinical note
           </span>
           {note && !isLoading ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="sm"
+                variant={savedId ? "ghost" : "default"}
+                onClick={() => void handleSave()}
+                disabled={saving || !!savedId}
+              >
+                {saving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : savedId ? (
+                  <Check className="h-3.5 w-3.5 text-status-online" />
+                ) : (
+                  <Save className="h-3.5 w-3.5" />
+                )}
+                {savedId ? "Saved" : "Save"}
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => void copyNote()}>
                 {copied ? (
                   <Check className="h-3.5 w-3.5 text-status-online" />

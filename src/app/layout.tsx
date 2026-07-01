@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "./globals.css";
@@ -21,12 +22,12 @@ const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://neoscribe.vercel.app";
 
 const description =
-  "AI clinical documentation playground from Plural Health — run transcripts through cloud and in-browser models, compare extractions side by side, and keep every run.";
+  "NeoScribe records a consultation, transcribes it on your device, and turns it into a structured clinical note you can edit and export to PDF, Word, or Markdown. Cloud or in-browser models, your call.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "NeoScribe — Plural Health",
+    default: "NeoScribe · Plural Health",
     template: "%s · NeoScribe",
   },
   description,
@@ -50,14 +51,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "NeoScribe",
-    title: "NeoScribe — Plural Health",
+    title: "NeoScribe · Plural Health",
     description,
     url: siteUrl,
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NeoScribe — Plural Health",
+    title: "NeoScribe · Plural Health",
     description,
   },
   robots: {
@@ -88,10 +89,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
-          <QueryProvider>
-            {children}
-            <Toaster />
-          </QueryProvider>
+          <AuthProvider>
+            <QueryProvider>
+              {children}
+              <Toaster />
+            </QueryProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

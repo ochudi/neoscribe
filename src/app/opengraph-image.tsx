@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "NeoScribe — Plural Health";
+export const alt = "NeoScribe · Plural Health";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -65,11 +65,11 @@ export default async function Image() {
               fontSize: 32,
               color: "#525252",
               lineHeight: 1.3,
-              maxWidth: 900,
+              maxWidth: 940,
             }}
           >
-            AI clinical documentation playground. Compare models, inspect
-            extractions, ship faster.
+            Record the consult. Get a clean clinical note. On-device
+            transcription, your choice of model.
           </div>
         </div>
 
@@ -83,8 +83,8 @@ export default async function Image() {
             fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
           }}
         >
-          <span>v1.0.0 · INTERNAL</span>
-          <span>neoscribe.app</span>
+          <span>Clinical documentation, on your device</span>
+          <span>NeoScribe</span>
         </div>
       </div>
     ),

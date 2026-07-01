@@ -24,6 +24,7 @@ const HF_TOKEN = Deno.env.get("HF_TOKEN");
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
 const CORS = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
@@ -396,6 +397,7 @@ const REST_HEADERS = {
 
 interface RunRow {
   id?: string;
+  user_id?: string | null;
   client_id: string;
   model_id: string;
   model_name: string;
@@ -429,19 +431,15 @@ async function insertRun(row: RunRow): Promise<RunRow | null> {
   }
 }
 
-async function listRuns(clientId: string, limit: number) {
-  const url =
-    `${REST}/runs?client_id=eq.${encodeURIComponent(clientId)}` +
-    `&order=created_at.desc&limit=${limit}`;
+async function listRuns(filter: string, limit: number) {
+  const url = `${REST}/runs?${filter}&order=created_at.desc&limit=${limit}`;
   const res = await fetch(url, { headers: REST_HEADERS });
   if (!res.ok) throw new Error(`runs query failed (${res.status})`);
   return await res.json();
 }
 
-async function deleteRun(clientId: string, id: string) {
-  const url =
-    `${REST}/runs?client_id=eq.${encodeURIComponent(clientId)}` +
-    `&id=eq.${encodeURIComponent(id)}`;
+async function deleteRun(filter: string, id: string) {
+  const url = `${REST}/runs?${filter}&id=eq.${encodeURIComponent(id)}`;
   const res = await fetch(url, {
     method: "DELETE",
     headers: { ...REST_HEADERS, Prefer: "count=exact" },
@@ -451,10 +449,77 @@ async function deleteRun(clientId: string, id: string) {
   return !range.endsWith("/0");
 }
 
-async function clearRuns(clientId: string) {
-  const url = `${REST}/runs?client_id=eq.${encodeURIComponent(clientId)}`;
+async function clearRuns(filter: string) {
+  const url = `${REST}/runs?${filter}`;
   const res = await fetch(url, { method: "DELETE", headers: REST_HEADERS });
   if (!res.ok) throw new Error(`clear failed (${res.status})`);
+}
+
+// --- Saved notes (transcript + generated clinical note) -------------------
+
+interface NoteRow {
+  id?: string;
+  user_id?: string | null;
+  client_id: string;
+  model_id: string;
+  model_name: string;
+  runtime: string;
+  source: string;
+  input_type: string;
+  transcript: string;
+  note: unknown;
+  created_at?: string;
+}
+
+async function insertNote(row: NoteRow): Promise<NoteRow | null> {
+  try {
+    const res = await fetch(`${REST}/notes`, {
+      method: "POST",
+      headers: { ...REST_HEADERS, Prefer: "return=representation" },
+      body: JSON.stringify(row),
+    });
+    if (!res.ok) {
+      console.error("insertNote failed:", res.status, await res.text());
+      return null;
+    }
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows[0] : rows;
+  } catch (e) {
+    console.error("insertNote exception:", e);
+    return null;
+  }
+}
+
+async function listNoteRows(filter: string, limit: number) {
+  const url = `${REST}/notes?${filter}&order=created_at.desc&limit=${limit}`;
+  const res = await fetch(url, { headers: REST_HEADERS });
+  if (!res.ok) throw new Error(`notes query failed (${res.status})`);
+  return await res.json();
+}
+
+async function deleteNoteRow(filter: string, id: string) {
+  const url = `${REST}/notes?${filter}&id=eq.${encodeURIComponent(id)}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: { ...REST_HEADERS, Prefer: "count=exact" },
+  });
+  if (!res.ok) throw new Error(`note delete failed (${res.status})`);
+  const range = res.headers.get("content-range") ?? "";
+  return !range.endsWith("/0");
+}
+
+function noteToSummary(row: NoteRow) {
+  return {
+    id: row.id,
+    savedAt: row.created_at,
+    modelId: row.model_id,
+    modelName: row.model_name,
+    runtime: row.runtime,
+    source: row.source,
+    inputType: row.input_type,
+    transcript: row.transcript,
+    note: row.note,
+  };
 }
 
 function runToSummary(row: RunRow) {
@@ -488,6 +553,50 @@ function clientIdFrom(req: Request) {
   const id = req.headers.get("x-client-id")?.trim() ?? "";
   // Constrain to something sane so it can't be abused as a storage field.
   return id && id.length <= 64 ? id : null;
+}
+
+// Resolve the Supabase user id from the caller's bearer token by asking the
+// auth server to validate it (no local JWT secret needed). Cached briefly so a
+// burst of requests doesn't hammer /auth/v1/user.
+const userCache = new Map<string, { id: string; at: number }>();
+async function userIdFrom(req: Request): Promise<string | null> {
+  const header = req.headers.get("Authorization") ?? "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (!token || !SUPABASE_URL || !ANON_KEY) return null;
+  const cached = userCache.get(token);
+  if (cached && Date.now() - cached.at < 60_000) return cached.id;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: ANON_KEY, Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return null;
+    const user = await res.json();
+    const id = typeof user?.id === "string" ? user.id : null;
+    if (id) userCache.set(token, { id, at: Date.now() });
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+interface Scope {
+  userId: string | null;
+  clientId: string | null;
+}
+
+async function scopeFrom(req: Request): Promise<Scope> {
+  return { userId: await userIdFrom(req), clientId: clientIdFrom(req) };
+}
+
+// PostgREST filter selecting the caller's rows. Signed-in users are scoped by
+// user_id; anonymous callers by their browser id (and only their un-owned
+// rows). Null when there's nothing to scope to.
+function scopeFilter(scope: Scope): string | null {
+  if (scope.userId) return `user_id=eq.${encodeURIComponent(scope.userId)}`;
+  if (scope.clientId)
+    return `client_id=eq.${encodeURIComponent(scope.clientId)}&user_id=is.null`;
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -582,12 +691,13 @@ Deno.serve(async (req) => {
 
       // Persist the run when the caller identifies itself; extraction still
       // succeeds if the insert fails.
-      const clientId = clientIdFrom(req);
+      const scope = await scopeFrom(req);
       let runId: string | undefined;
-      if (clientId) {
+      if (scope.userId || scope.clientId) {
         const { itemCount, codedCount } = countItems(extraction);
         const inserted = await insertRun({
-          client_id: clientId,
+          user_id: scope.userId,
+          client_id: scope.clientId ?? "",
           model_id: id,
           model_name: model.name,
           model_size_label: model.sizeLabel,
@@ -678,8 +788,10 @@ Deno.serve(async (req) => {
 
     if (path === "/runs" && req.method === "POST") {
       // On-device runs are reported by the browser after local inference.
-      const clientId = clientIdFrom(req);
-      if (!clientId) return errorJson(400, "Missing x-client-id header.");
+      const scope = await scopeFrom(req);
+      if (!scope.userId && !scope.clientId) {
+        return errorJson(400, "Missing x-client-id header.");
+      }
       let body: any;
       try {
         body = await req.json();
@@ -692,7 +804,8 @@ Deno.serve(async (req) => {
       }
       const { itemCount, codedCount } = countItems(extraction);
       const inserted = await insertRun({
-        client_id: clientId,
+        user_id: scope.userId,
+        client_id: scope.clientId ?? "",
         model_id: String(body.modelId ?? "unknown"),
         model_name: String(body.modelName ?? "Unknown model"),
         model_size_label: String(body.modelSizeLabel ?? ""),
@@ -710,32 +823,82 @@ Deno.serve(async (req) => {
     }
 
     if (path === "/runs" && req.method === "GET") {
-      const clientId = clientIdFrom(req);
-      if (!clientId) return json([]);
+      const filter = scopeFilter(await scopeFrom(req));
+      if (!filter) return json([]);
       const limit = Math.min(500, Math.max(1, Number(url.searchParams.get("limit")) || 200));
-      const rows = await listRuns(clientId, limit);
+      const rows = await listRuns(filter, limit);
       return json(rows.map(runToSummary));
     }
 
     if (path === "/runs" && req.method === "DELETE") {
-      const clientId = clientIdFrom(req);
-      if (!clientId) return errorJson(400, "Missing x-client-id header.");
-      await clearRuns(clientId);
+      const filter = scopeFilter(await scopeFrom(req));
+      if (!filter) return errorJson(400, "Missing caller identity.");
+      await clearRuns(filter);
       return json({ ok: true });
     }
 
     const runMatch = path.match(/^\/runs\/([^/]+)$/);
     if (runMatch && req.method === "DELETE") {
-      const clientId = clientIdFrom(req);
-      if (!clientId) return errorJson(400, "Missing x-client-id header.");
-      const ok = await deleteRun(clientId, decodeURIComponent(runMatch[1]));
+      const filter = scopeFilter(await scopeFrom(req));
+      if (!filter) return errorJson(400, "Missing caller identity.");
+      const ok = await deleteRun(filter, decodeURIComponent(runMatch[1]));
       return ok
         ? json({ ok: true })
         : errorJson(404, "That history entry no longer exists.");
     }
 
+    // --- Saved notes -------------------------------------------------------
+
+    if (path === "/notes" && req.method === "POST") {
+      const scope = await scopeFrom(req);
+      if (!scope.userId && !scope.clientId) {
+        return errorJson(400, "Missing caller identity.");
+      }
+      let body: any;
+      try {
+        body = await req.json();
+      } catch {
+        return errorJson(400, "The request body wasn't valid JSON.");
+      }
+      if (!body?.note || typeof body.note !== "object") {
+        return errorJson(400, "Missing note payload.");
+      }
+      const inserted = await insertNote({
+        user_id: scope.userId,
+        client_id: scope.clientId ?? "",
+        model_id: String(body.modelId ?? "unknown"),
+        model_name: String(body.modelName ?? "Unknown model"),
+        runtime: body.runtime === "cloud" ? "cloud" : "device",
+        source: body.source === "recorded" ? "recorded" : "pasted",
+        input_type:
+          body.inputType === "structured_note" ? "structured_note" : "transcript",
+        transcript: String(body.transcript ?? "").slice(0, MAX_INPUT_CHARS),
+        note: body.note,
+      });
+      if (!inserted) return errorJson(500, "We couldn't save this note.");
+      return json(noteToSummary(inserted), 201);
+    }
+
+    if (path === "/notes" && req.method === "GET") {
+      const filter = scopeFilter(await scopeFrom(req));
+      if (!filter) return json([]);
+      const limit = Math.min(500, Math.max(1, Number(url.searchParams.get("limit")) || 200));
+      const rows = await listNoteRows(filter, limit);
+      return json(rows.map(noteToSummary));
+    }
+
+    const noteDeleteMatch = path.match(/^\/notes\/([^/]+)$/);
+    if (noteDeleteMatch && req.method === "DELETE") {
+      const filter = scopeFilter(await scopeFrom(req));
+      if (!filter) return errorJson(400, "Missing caller identity.");
+      const ok = await deleteNoteRow(filter, decodeURIComponent(noteDeleteMatch[1]));
+      return ok
+        ? json({ ok: true })
+        : errorJson(404, "That note no longer exists.");
+    }
+
     if (req.method === "GET" && path === "/dashboard/stats") {
-      const clientId = clientIdFrom(req);
+      const filter = scopeFilter(await scopeFrom(req));
       const models = await modelPayload();
       const online = models.filter((m) => m.status === "online").length;
 
@@ -745,7 +908,7 @@ Deno.serve(async (req) => {
       let itemCount = 0;
       let codedCount = 0;
 
-      if (clientId) {
+      if (filter) {
         const todayStart = url.searchParams.get("today");
         const yesterdayStart = url.searchParams.get("yesterday");
         const since =
@@ -754,7 +917,7 @@ Deno.serve(async (req) => {
             : new Date(Date.now() - 48 * 3600_000).toISOString();
         const rows: RunRow[] = await (async () => {
           const u =
-            `${REST}/runs?client_id=eq.${encodeURIComponent(clientId)}` +
+            `${REST}/runs?${filter}` +
             `&created_at=gte.${encodeURIComponent(since)}` +
             `&select=created_at,duration_ms,item_count,coded_count&limit=1000`;
           const res = await fetch(u, { headers: REST_HEADERS });

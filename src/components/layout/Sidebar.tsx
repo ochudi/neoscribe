@@ -9,6 +9,7 @@ import {
   FileText,
   LayoutGrid,
   MessageSquare,
+  NotebookText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,8 +22,9 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutGrid },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { href: "/scribe", label: "Scribe", icon: FileText },
+  { href: "/notes", label: "Notes", icon: NotebookText },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/compare", label: "Compare", icon: Columns3 },
   { href: "/models", label: "Models", icon: Boxes },

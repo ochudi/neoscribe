@@ -1,11 +1,13 @@
 import { API_BASE_URL } from "@/lib/constants";
 import { getClientId } from "@/lib/clientId";
+import { getAccessToken } from "@/lib/supabase/client";
 import type {
   DashboardStats,
   ExtractionResult,
   Model,
   RunSummary,
 } from "@/lib/api/types";
+import type { ClinicalNote, SavedNote } from "@/lib/notes/types";
 
 export interface ExtractionPayload {
   transcript: string;
@@ -38,6 +40,9 @@ function friendlyNetworkError(): ApiError {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // Attach the signed-in user's JWT when present; the API scopes data by user
+  // id when authenticated, and falls back to the anonymous browser id.
+  const token = await getAccessToken();
   let res: Response;
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
@@ -45,6 +50,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: {
         "Content-Type": "application/json",
         "x-client-id": getClientId(),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(init?.headers ?? {}),
       },
     });
@@ -132,6 +138,33 @@ export async function deleteRun(id: string): Promise<void> {
 
 export async function clearRuns(): Promise<void> {
   await request<{ ok: boolean }>("/v1/runs", { method: "DELETE" });
+}
+
+export interface SaveNotePayload {
+  modelId: string;
+  modelName: string;
+  runtime: "cloud" | "device";
+  source: "recorded" | "pasted";
+  transcript: string;
+  inputType: string;
+  note: ClinicalNote;
+}
+
+export async function saveNote(payload: SaveNotePayload): Promise<SavedNote> {
+  return request<SavedNote>("/v1/notes", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listNotes(limit = 200): Promise<SavedNote[]> {
+  return request<SavedNote[]>(`/v1/notes?limit=${limit}`);
+}
+
+export async function deleteNote(id: string): Promise<void> {
+  await request<{ ok: boolean }>(`/v1/notes/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
