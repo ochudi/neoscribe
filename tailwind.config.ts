@@ -105,6 +105,10 @@ const config: Config = {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -116,6 +120,7 @@ const config: Config = {
         caret: "caret 1.05s step-end infinite",
         "pulse-ring": "pulse-ring 2.1s ease-out infinite",
         "fade-up": "fade-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both",
+        marquee: "marquee 48s linear infinite",
       },
     },
   },

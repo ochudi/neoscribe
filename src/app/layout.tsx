@@ -82,12 +82,27 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+// Warm the connection to the API origin before the first query fires.
+// React hoists these into <head>.
+const apiOrigin = (() => {
+  try {
+    return new URL(
+      process.env.NEXT_PUBLIC_API_BASE_URL ??
+        process.env.NEXT_PUBLIC_SUPABASE_URL ??
+        "https://ixgdjomuyvlajdtaqlzd.supabase.co"
+    ).origin;
+  } catch {
+    return null;
+  }
+})();
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
+        {apiOrigin ? <link rel="preconnect" href={apiOrigin} /> : null}
         <ThemeProvider>
           <AuthProvider>
             <QueryProvider>

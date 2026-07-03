@@ -3,9 +3,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Cloud,
-  Columns3,
   Download,
-  FileText,
   Mic,
   MonitorSmartphone,
   ShieldCheck,
@@ -14,6 +12,11 @@ import {
 
 import { LandingNav } from "@/components/marketing/LandingNav";
 import { HeroStage } from "@/components/marketing/HeroStage";
+import { HeroBackdrop } from "@/components/marketing/HeroBackdrop";
+import { EcgDivider } from "@/components/marketing/EcgDivider";
+import { ShorthandTicker } from "@/components/marketing/ShorthandTicker";
+import { StatStrip } from "@/components/marketing/StatStrip";
+import { FeatureGrid } from "@/components/marketing/FeatureGrid";
 import { Reveal } from "@/components/marketing/Reveal";
 
 const siteUrl =
@@ -107,29 +110,6 @@ function Step({
   );
 }
 
-const FEATURES = [
-  {
-    icon: MonitorSmartphone,
-    title: "On-device by default",
-    body: "Whisper and small language models run in the browser over WebGPU or WASM. The recording and the transcript stay on the machine unless you reach for a cloud model.",
-  },
-  {
-    icon: Columns3,
-    title: "Compare, don't guess",
-    body: "Run the same consult through two or three models at once and see who caught the diagnosis, the dose, and the follow-up.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Honest about limits",
-    body: "When a model is too heavy for your device or a provider is having a bad day, NeoScribe tells you in plain English instead of spinning forever.",
-  },
-  {
-    icon: FileText,
-    title: "Every run kept",
-    body: "Transcripts and notes are saved and searchable, so last Tuesday's clinic is one click away when the paperwork catches up with you.",
-  },
-];
-
 export default function LandingPage() {
   return (
     <div className="min-h-dvh bg-background">
@@ -137,24 +117,8 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        {/* ambient backdrop: dot grid + soft monochrome glows */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(80%_60%_at_50%_25%,black,transparent)]"
-          style={{
-            backgroundImage:
-              "radial-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px)",
-            backgroundSize: "22px 22px",
-          }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-[420px] w-[720px] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
-          style={{
-            background:
-              "radial-gradient(closest-side, hsl(var(--foreground) / 0.05), transparent)",
-          }}
-        />
+        {/* ambient backdrop: dot grid that lights up around the cursor */}
+        <HeroBackdrop />
 
         <div className="mx-auto grid w-full max-w-6xl gap-12 px-5 pb-16 pt-14 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pb-24 lg:pt-20">
           <div className="flex flex-col justify-center gap-6">
@@ -214,8 +178,16 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* A heartbeat, drawn as you arrive */}
+      <EcgDivider />
+
+      {/* Shorthand decoder */}
+      <section className="pb-16 pt-8 lg:pb-20">
+        <ShorthandTicker />
+      </section>
+
       {/* Runtimes */}
-      <section className="border-t border-border bg-muted/20">
+      <section className="border-t border-border bg-muted/20 [content-visibility:auto] [contain-intrinsic-size:auto_640px]">
         <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-20">
           <Reveal className="flex flex-col gap-3">
             <Eyebrow>Two ways to run it</Eyebrow>
@@ -269,7 +241,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-20">
+      <section className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-20 [content-visibility:auto] [contain-intrinsic-size:auto_560px]">
         <Reveal className="flex flex-col gap-3">
           <Eyebrow>How it works</Eyebrow>
           <h2 className="max-w-2xl text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
@@ -298,35 +270,24 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* By the numbers */}
+      <section className="mx-auto w-full max-w-6xl px-5 pb-16 sm:px-8 lg:pb-20">
+        <Reveal>
+          <StatStrip />
+        </Reveal>
+      </section>
+
       {/* Features */}
-      <section className="border-t border-border bg-muted/20">
+      <section className="border-t border-border bg-muted/20 [content-visibility:auto] [contain-intrinsic-size:auto_520px]">
         <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-20">
-          <div className="grid gap-4 sm:grid-cols-2">
-            {FEATURES.map((f, i) => (
-              <Reveal
-                key={f.title}
-                delay={(i % 2) * 90}
-                className="group flex gap-4 rounded-xl border border-border bg-background p-6 transition-all duration-300 hover:-translate-y-1 hover:border-foreground/25 hover:shadow-[0_24px_50px_-28px_rgba(0,0,0,0.4)]"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border transition-colors group-hover:border-foreground/30">
-                  <f.icon className="h-5 w-5" />
-                </span>
-                <div className="flex flex-col gap-1.5">
-                  <h3 className="text-[15px] font-semibold text-foreground">
-                    {f.title}
-                  </h3>
-                  <p className="text-[14px] leading-relaxed text-muted-foreground">
-                    {f.body}
-                  </p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
+          <Reveal>
+            <FeatureGrid />
+          </Reveal>
         </div>
       </section>
 
       {/* Privacy CTA */}
-      <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8">
+      <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 [content-visibility:auto] [contain-intrinsic-size:auto_480px]">
         <Reveal className="relative flex flex-col items-center gap-6 overflow-hidden rounded-2xl border border-border bg-background px-6 py-14 text-center">
           <div
             aria-hidden

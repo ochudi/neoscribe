@@ -20,53 +20,87 @@ const PLAN_LINES = [
 
 const FULL_PLAN = PLAN_LINES.join("\n");
 
-function useTypewriter(enabled: boolean) {
+/**
+ * `enabled` = reduced-motion off (otherwise show the full plan, still).
+ * `running` = the hero is actually on screen in a visible tab; when false the
+ * typewriter freezes in place instead of burning a 34ms interval for nobody.
+ */
+function useTypewriter(enabled: boolean, running: boolean) {
   const [text, setText] = useState(enabled ? "" : FULL_PLAN);
+  const pos = useRef(0);
 
   useEffect(() => {
     if (!enabled) {
       setText(FULL_PLAN);
       return;
     }
+    if (!running) return; // paused: keep current text, no timers
 
-    let i = 0;
     let holding = false;
-    setText("");
+    let hold: number | undefined;
 
     const tick = () => {
       if (holding) return;
-      i += 1;
-      if (i > FULL_PLAN.length) {
+      pos.current += 1;
+      if (pos.current > FULL_PLAN.length) {
         holding = true;
-        window.setTimeout(() => {
-          i = 0;
+        hold = window.setTimeout(() => {
+          pos.current = 0;
           holding = false;
           setText("");
         }, 2600);
         return;
       }
-      setText(FULL_PLAN.slice(0, i));
+      setText(FULL_PLAN.slice(0, pos.current));
     };
 
     const id = window.setInterval(tick, 34);
-    return () => window.clearInterval(id);
-  }, [enabled]);
+    return () => {
+      window.clearInterval(id);
+      if (hold) window.clearTimeout(hold);
+    };
+  }, [enabled, running]);
 
   return text;
 }
 
-function useElapsed(enabled: boolean) {
+function useElapsed(running: boolean) {
   const [secs, setSecs] = useState(134); // 02:14, matches the old still
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!running) return;
     const id = window.setInterval(() => setSecs((s) => s + 1), 1000);
     return () => window.clearInterval(id);
-  }, [enabled]);
+  }, [running]);
 
   const mm = String(Math.floor(secs / 60)).padStart(2, "0");
   const ss = String(secs % 60).padStart(2, "0");
   return `${mm}:${ss}`;
+}
+
+/** True while `ref` is in the viewport and the tab is visible. */
+function useOnStage(ref: React.RefObject<HTMLElement | null>): boolean {
+  const [inView, setInView] = useState(true);
+  const [tabVisible, setTabVisible] = useState(true);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0 }
+    );
+    io.observe(node);
+
+    const onVis = () => setTabVisible(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [ref]);
+
+  return inView && tabVisible;
 }
 
 function TrafficLights() {
@@ -107,14 +141,18 @@ export function HeroStage() {
   const target = useRef({ rx: 0, ry: 0, gx: 0, gy: 0, op: 0 });
   const current = useRef({ rx: 0, ry: 0, gx: 0, gy: 0, op: 0 });
 
-  const typed = useTypewriter(animate);
-  const elapsed = useElapsed(animate);
+  const onStage = useOnStage(stageRef);
+  const running = animate && onStage;
+
+  const typed = useTypewriter(animate, running);
+  const elapsed = useElapsed(running);
 
   useEffect(() => {
     if (!animate) {
       if (cardRef.current) cardRef.current.style.transform = "";
       return;
     }
+    if (!running) return; // offscreen or hidden tab: no rAF work at all
 
     let raf = 0;
     const loop = () => {
@@ -143,7 +181,7 @@ export function HeroStage() {
     };
     raf = window.requestAnimationFrame(loop);
     return () => window.cancelAnimationFrame(raf);
-  }, [animate]);
+  }, [animate, running]);
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!animate) return;
