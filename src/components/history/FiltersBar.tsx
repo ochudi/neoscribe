@@ -62,7 +62,7 @@ export function FiltersBar({ filters, onChange, modelOptions }: FiltersBarProps)
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-border bg-background p-3">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-full max-w-sm">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />

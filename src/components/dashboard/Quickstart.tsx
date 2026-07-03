@@ -25,7 +25,7 @@ function QuickstartCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col gap-3 rounded-md border border-border bg-background p-5 transition-colors hover:bg-muted/40"
+      className="group flex flex-col gap-3 rounded-lg border border-border bg-background p-5 transition-colors hover:border-foreground/25 hover:bg-muted/30"
     >
       <div className="flex items-start justify-between">
         <div className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-muted/40">

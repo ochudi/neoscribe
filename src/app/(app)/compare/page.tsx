@@ -559,7 +559,7 @@ function ComparePageContent() {
 
         {/* Results grid */}
         {selectedModels.length < MIN_MODELS ? (
-          <div className="rounded-md border border-border bg-background px-4 py-8 text-center text-[13px] text-muted-foreground print:hidden">
+          <div className="rounded-lg border border-dashed border-border bg-background px-4 py-8 text-center text-[13px] text-muted-foreground print:hidden">
             Add at least {MIN_MODELS} models to start a comparison.
           </div>
         ) : (

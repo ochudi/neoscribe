@@ -54,10 +54,10 @@ export function LandingNav() {
             priority
           />
           <span className="flex flex-col leading-none">
-            <span className="text-[15px] font-semibold tracking-tight text-foreground">
+            <span className="text-[15px] font-semibold leading-tight tracking-tight text-foreground">
               NeoScribe
             </span>
-            <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="mt-1 font-mono text-[9px] uppercase leading-none tracking-[0.18em] text-muted-foreground">
               Plural Health
             </span>
           </span>
@@ -72,10 +72,10 @@ export function LandingNav() {
           </Link>
           <ThemeToggle />
           <Link
-            href="/dashboard"
+            href="/signup"
             className="inline-flex h-9 items-center rounded-md bg-primary px-3.5 text-[13px] font-medium text-primary-foreground transition-opacity hover:opacity-90 sm:px-4"
           >
-            Open NeoScribe
+            Get started
           </Link>
         </div>
       </div>

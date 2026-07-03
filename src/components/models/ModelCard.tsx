@@ -77,7 +77,7 @@ export function ModelCard({ model }: { model: Model }) {
   };
 
   return (
-    <div className="flex flex-col rounded-md border border-border bg-background">
+    <div className="flex flex-col rounded-lg border border-border bg-background transition-colors hover:border-foreground/15">
       <div className="flex items-start justify-between gap-3 px-4 pt-4">
         <h3 className="text-[16px] font-semibold leading-tight text-foreground">
           {model.name}

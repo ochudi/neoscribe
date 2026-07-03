@@ -79,11 +79,43 @@ const config: Config = {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(400%)" },
         },
+        wave: {
+          "0%, 100%": { transform: "scaleY(0.32)" },
+          "50%": { transform: "scaleY(1)" },
+        },
+        sweep: {
+          "0%": { left: "-8%", opacity: "0" },
+          "12%": { opacity: "1" },
+          "88%": { opacity: "1" },
+          "100%": { left: "108%", opacity: "0" },
+        },
+        floaty: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-9px)" },
+        },
+        caret: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0" },
+        },
+        "pulse-ring": {
+          "0%": { transform: "scale(0.85)", opacity: "0.55" },
+          "100%": { transform: "scale(2.4)", opacity: "0" },
+        },
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shimmer: "shimmer 1.4s infinite",
+        wave: "wave 1.1s ease-in-out infinite",
+        sweep: "sweep 4.2s linear infinite",
+        floaty: "floaty 6s ease-in-out infinite",
+        caret: "caret 1.05s step-end infinite",
+        "pulse-ring": "pulse-ring 2.1s ease-out infinite",
+        "fade-up": "fade-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) both",
       },
     },
   },

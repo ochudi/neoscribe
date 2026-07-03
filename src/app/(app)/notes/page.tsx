@@ -155,7 +155,7 @@ export default function NotesPage() {
                   key={n.id}
                   type="button"
                   onClick={() => setOpenId(n.id)}
-                  className="flex flex-col gap-2 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:border-foreground/30 hover:bg-muted/30"
+                  className="flex flex-col gap-2 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:border-foreground/25 hover:bg-muted/30"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-[14px] font-medium text-foreground">

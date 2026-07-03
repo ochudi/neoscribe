@@ -108,7 +108,7 @@ function MobileCardList({
       {entries.map((entry) => (
         <li
           key={entry.id}
-          className="rounded-md border border-border bg-background p-4 transition-colors hover:bg-muted/30"
+          className="rounded-lg border border-border bg-background p-4 transition-colors hover:border-foreground/25 hover:bg-muted/30"
         >
           <button
             type="button"
@@ -188,7 +188,7 @@ export function HistoryTable({
         onDelete={onDelete}
       />
 
-      <div className="hidden overflow-hidden rounded-md border border-border bg-background md:block">
+      <div className="hidden overflow-hidden rounded-lg border border-border bg-background md:block">
         <div
           className={cn(
             "grid items-center gap-3 border-b border-border bg-muted/30 px-4 py-2",

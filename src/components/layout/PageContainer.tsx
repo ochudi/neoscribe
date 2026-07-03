@@ -30,7 +30,7 @@ export function PageContainer({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-6 sm:py-5 lg:px-8">
+      <div className="flex flex-col gap-3 border-b border-border px-4 py-4 motion-safe:animate-fade-up sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-6 sm:py-5 lg:px-8">
         <div className="min-w-0">
           <h1 className="text-[20px] font-semibold leading-tight tracking-tight text-foreground sm:text-[24px]">
             {title}
@@ -48,11 +48,22 @@ export function PageContainer({
         ) : null}
       </div>
 
+      {/* Body eases in a beat after the header — one quiet, app-wide entrance. */}
       {disableScroll ? (
-        <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
+        <div
+          className="min-h-0 flex-1 overflow-hidden motion-safe:animate-fade-up"
+          style={{ animationDelay: "75ms" }}
+        >
+          {children}
+        </div>
       ) : (
         <ScrollArea className="flex-1">
-          <div className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8">{children}</div>
+          <div
+            className="px-4 py-5 motion-safe:animate-fade-up sm:px-6 sm:py-6 lg:px-8"
+            style={{ animationDelay: "75ms" }}
+          >
+            {children}
+          </div>
         </ScrollArea>
       )}
     </div>

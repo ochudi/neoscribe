@@ -35,7 +35,7 @@ function CodedMiniBar({ coded, total }: { coded: number; total: number }) {
 
 function EmptyRuns() {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-border bg-background px-4 py-10 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-background px-4 py-10 text-center">
       <p className="text-[14px] font-medium text-foreground">
         No extractions yet — run your first one.
       </p>
@@ -81,7 +81,7 @@ export function RecentRuns({ runs }: RecentRunsProps) {
               <li key={run.id}>
                 <Link
                   href={`/history?run=${encodeURIComponent(run.id)}`}
-                  className="flex flex-col gap-2 rounded-md border border-border bg-background p-3 transition-colors hover:bg-muted/30"
+                  className="flex flex-col gap-2 rounded-lg border border-border bg-background p-3 transition-colors hover:border-foreground/25 hover:bg-muted/30"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-[14px] font-medium text-foreground">
@@ -103,7 +103,7 @@ export function RecentRuns({ runs }: RecentRunsProps) {
           </ul>
 
           {/* Desktop table */}
-          <div className="hidden overflow-hidden rounded-md border border-border bg-background md:block">
+          <div className="hidden overflow-hidden rounded-lg border border-border bg-background md:block">
             <div className="grid grid-cols-[88px_minmax(0,1fr)_110px_80px_150px] items-center gap-3 border-b border-border bg-muted/30 px-4 py-2 text-[11px] uppercase tracking-wider text-muted-foreground">
               <span className="font-mono">When</span>
               <span>Model</span>
@@ -137,10 +137,10 @@ export function RecentRuns({ runs }: RecentRunsProps) {
 
           <Link
             href="/history"
-            className="inline-flex items-center gap-1 self-start text-[13px] text-muted-foreground hover:text-foreground"
+            className="group inline-flex items-center gap-1 self-start text-[13px] text-muted-foreground transition-colors hover:text-foreground"
           >
             View all in History
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </>
       )}

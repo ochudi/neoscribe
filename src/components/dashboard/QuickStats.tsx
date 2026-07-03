@@ -22,7 +22,7 @@ function StatCard({ label, value, hint, trend }: StatCardProps) {
           ? Minus
           : null;
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border bg-background p-4">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-background p-4">
       <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
         {label}
       </p>

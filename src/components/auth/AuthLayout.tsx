@@ -39,14 +39,22 @@ export function AuthLayout({
 
       <main className="flex flex-1 items-center justify-center px-5 py-10">
         <div className="w-full max-w-sm">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 motion-safe:animate-fade-up">
             <h1 className="text-[22px] font-semibold tracking-tight text-foreground">
               {title}
             </h1>
             <p className="text-[14px] text-muted-foreground">{subtitle}</p>
           </div>
-          <div className="mt-6">{children}</div>
-          <div className="mt-6 text-center text-[13px] text-muted-foreground">
+          <div
+            className="mt-6 motion-safe:animate-fade-up"
+            style={{ animationDelay: "75ms" }}
+          >
+            {children}
+          </div>
+          <div
+            className="mt-6 text-center text-[13px] text-muted-foreground motion-safe:animate-fade-up"
+            style={{ animationDelay: "150ms" }}
+          >
             {footer}
           </div>
         </div>

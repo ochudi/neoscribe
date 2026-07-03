@@ -57,7 +57,7 @@ export function NavList({ onNavigate, size = "compact" }: NavListProps) {
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex items-center gap-2.5 rounded-md px-3 transition-colors",
+              "group relative flex items-center gap-2.5 rounded-md px-3 transition-colors",
               heightClass,
               fontClass,
               active
@@ -65,7 +65,20 @@ export function NavList({ onNavigate, size = "compact" }: NavListProps) {
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             )}
           >
-            <Icon className="h-4 w-4" />
+            {/* Active marker — a quiet bar that grows in. */}
+            <span
+              aria-hidden
+              className={cn(
+                "absolute left-0 top-1/2 w-[2.5px] -translate-y-1/2 rounded-full bg-foreground transition-all duration-300",
+                active ? "h-4 opacity-100" : "h-1.5 opacity-0"
+              )}
+            />
+            <Icon
+              className={cn(
+                "h-4 w-4 transition-transform duration-200",
+                !active && "motion-safe:group-hover:scale-110"
+              )}
+            />
             <span>{label}</span>
           </Link>
         );

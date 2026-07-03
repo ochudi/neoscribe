@@ -128,7 +128,7 @@ export function CompareSummary({ models, results }: CompareSummaryProps) {
   if (metrics.length === 0) return null;
 
   return (
-    <div className="rounded-md border border-border bg-background px-4 py-4">
+    <div className="rounded-lg border border-border bg-background px-4 py-4">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <MetricBlock title="Coding rate">
           {metrics.map((m) => (

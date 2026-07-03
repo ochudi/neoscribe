@@ -13,6 +13,11 @@
 // Secrets required (set via `supabase secrets set ...`):
 //   HF_TOKEN            Hugging Face read token
 //   ALLOWED_ORIGIN      (optional) your site origin — defaults to "*"
+//   OPENROUTER_API_KEY  (optional) enables OpenRouter-backed models (free Gemma)
+// Optional (only to enable MedGemma, which is gated and not on the router):
+//   MEDGEMMA_ENDPOINT_URL    base URL of a dedicated HF Inference Endpoint
+//   MEDGEMMA_ENDPOINT_MODEL  (optional) served model name — defaults to "tgi"
+//   MEDGEMMA_ENDPOINT_TOKEN  (optional) endpoint token — defaults to HF_TOKEN
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected automatically.
 //
 // Deploy:
@@ -21,6 +26,7 @@
 // deno-lint-ignore-file no-explicit-any
 
 const HF_TOKEN = Deno.env.get("HF_TOKEN");
+const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY") ?? "";
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -44,12 +50,61 @@ interface ModelDef {
   sizeLabel: string;
   description: string;
   typicalLatencyS: number;
+  /**
+   * If set, this model runs on a dedicated Hugging Face Inference Endpoint you
+   * deploy yourself, not the shared router (used for gated models the router
+   * won't serve, like MedGemma). Reads these secrets, all prefixed with this
+   * value: `${endpointPrefix}_URL` (required — the endpoint base URL; when it's
+   * absent the model is simply shown as "needs setup" and can't be called),
+   * `${endpointPrefix}_MODEL` (optional, defaults to "tgi"), and
+   * `${endpointPrefix}_TOKEN` (optional, defaults to HF_TOKEN).
+   */
+  endpointPrefix?: string;
+  /**
+   * If set, this model is served through OpenRouter (needs OPENROUTER_API_KEY)
+   * using this OpenRouter model id, e.g. "google/gemma-4-31b-it:free". Used for
+   * free/cheap hosted models the HF router doesn't carry.
+   */
+  openrouterId?: string;
 }
 
 // Every entry references a model verified to work on the HF router with this
 // project's token. Keep descriptions plain-English — the UI shows them to
 // non-technical users.
 const MODELS: ModelDef[] = [
+  {
+    id: "medgemma-4b",
+    name: "MedGemma 4B",
+    hf_id: "google/medgemma-4b-it",
+    provider: "Google",
+    sizeLabel: "4B",
+    description:
+      "Google's medical Gemma, tuned on clinical text and images. Gated, so it runs on a dedicated endpoint the site owner deploys.",
+    typicalLatencyS: 7,
+    endpointPrefix: "MEDGEMMA_ENDPOINT",
+  },
+  {
+    id: "gemma-4-31b-free",
+    name: "Gemma 4 31B (free)",
+    hf_id: "google/gemma-4-31b-it",
+    provider: "Google",
+    sizeLabel: "31B",
+    description:
+      "Google's large open Gemma, served free through OpenRouter. General-purpose, not medically tuned, but a no-cost way to test the online pipeline. Free tier gets rate-limited under load.",
+    typicalLatencyS: 8,
+    openrouterId: "google/gemma-4-31b-it:free",
+  },
+  {
+    id: "gemma-3-27b-or",
+    name: "Gemma 3 27B",
+    hf_id: "google/gemma-3-27b-it",
+    provider: "Google",
+    sizeLabel: "27B",
+    description:
+      "Google's Gemma 3 at 27B through OpenRouter. Reliable and near-free (fractions of a cent per note) — the dependable online choice when a demo can't stall on a rate limit.",
+    typicalLatencyS: 6,
+    openrouterId: "google/gemma-3-27b-it",
+  },
   {
     id: "gpt-oss-20b",
     name: "GPT-OSS 20B",
@@ -171,21 +226,60 @@ async function routerModelIds(): Promise<Set<string> | null> {
   }
 }
 
+/**
+ * Resolves a model's dedicated-endpoint config from env, or null if the model
+ * doesn't use an endpoint or the endpoint URL hasn't been set.
+ */
+function endpointConfig(
+  m: ModelDef
+): { url: string; model: string; token: string } | null {
+  if (!m.endpointPrefix) return null;
+  const url = Deno.env.get(`${m.endpointPrefix}_URL`);
+  if (!url) return null;
+  return {
+    url: url.replace(/\/+$/, ""),
+    model: Deno.env.get(`${m.endpointPrefix}_MODEL`) ?? "tgi",
+    token: Deno.env.get(`${m.endpointPrefix}_TOKEN`) ?? HF_TOKEN ?? "",
+  };
+}
+
 async function modelPayload() {
   const now = new Date().toISOString();
   const available = await routerModelIds();
-  return MODELS.map((m) => ({
-    id: m.id,
-    name: m.name,
-    runtime: "cloud" as const,
-    status: available === null || available.has(m.hf_id) ? "online" : "offline",
-    sizeLabel: m.sizeLabel,
-    provider: m.provider,
-    description: m.description,
-    typicalLatencyS: m.typicalLatencyS,
-    hfUrl: `https://huggingface.co/${m.hf_id}`,
-    lastCheckedAt: now,
-  }));
+  return MODELS.map((m) => {
+    // Endpoint-backed models never appear on the shared router; their
+    // availability is simply whether the owner has configured the endpoint.
+    let status: "online" | "offline";
+    let statusDetail: string | undefined;
+    if (m.endpointPrefix) {
+      const configured = !!endpointConfig(m);
+      status = configured ? "online" : "offline";
+      statusDetail = configured
+        ? "Dedicated endpoint"
+        : "Needs a dedicated endpoint (not set up yet)";
+    } else if (m.openrouterId) {
+      status = OPENROUTER_KEY ? "online" : "offline";
+      statusDetail = OPENROUTER_KEY
+        ? "Free via OpenRouter"
+        : "Needs an OpenRouter key (not set up yet)";
+    } else {
+      status =
+        available === null || available.has(m.hf_id) ? "online" : "offline";
+    }
+    return {
+      id: m.id,
+      name: m.name,
+      runtime: "cloud" as const,
+      status,
+      ...(statusDetail ? { statusDetail } : {}),
+      sizeLabel: m.sizeLabel,
+      provider: m.provider,
+      description: m.description,
+      typicalLatencyS: m.typicalLatencyS,
+      hfUrl: `https://huggingface.co/${m.hf_id}`,
+      lastCheckedAt: now,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -359,20 +453,49 @@ async function callHuggingFace(
   prompt: string,
   maxTokens = 1400
 ) {
+  // Every target speaks the same OpenAI-compatible chat route; we just pick the
+  // base URL, token, model id, and headers per provider.
+  const ep = endpointConfig(model);
+  let url: string;
+  let token: string;
+  let modelField: string;
+  let timeoutMs = 60_000;
+  const extraHeaders: Record<string, string> = {};
+
+  if (ep) {
+    // Dedicated endpoint (e.g. MedGemma). Cold starts, so more headroom.
+    url = `${ep.url}/v1/chat/completions`;
+    token = ep.token;
+    modelField = ep.model;
+    timeoutMs = 120_000;
+  } else if (model.openrouterId) {
+    url = "https://openrouter.ai/api/v1/chat/completions";
+    token = OPENROUTER_KEY;
+    modelField = model.openrouterId;
+    // OpenRouter asks callers to identify themselves; harmless if ignored.
+    extraHeaders["HTTP-Referer"] = "https://neoscribe.vercel.app";
+    extraHeaders["X-Title"] = "NeoScribe";
+  } else {
+    url = "https://router.huggingface.co/v1/chat/completions";
+    token = HF_TOKEN ?? "";
+    modelField = model.hf_id;
+  }
+
   const doFetch = () =>
-    fetch("https://router.huggingface.co/v1/chat/completions", {
+    fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${HF_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
+        ...extraHeaders,
       },
       body: JSON.stringify({
-        model: model.hf_id,
+        model: modelField,
         messages: [{ role: "user", content: prompt }],
         max_tokens: maxTokens,
         temperature: 0.1,
       }),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
   let res = await doFetch();
@@ -382,6 +505,41 @@ async function callHuggingFace(
     res = await doFetch();
   }
   return res;
+}
+
+/**
+ * Blocks a cloud request early when the model can't run: an endpoint-backed
+ * model whose endpoint isn't configured, or a router model with no HF token.
+ * Returns an error Response to send back, or null when it's good to proceed.
+ */
+function cloudModelGuard(model: ModelDef): Response | null {
+  if (model.endpointPrefix) {
+    if (!endpointConfig(model)) {
+      return errorJson(
+        503,
+        `${model.name} runs on a dedicated endpoint that the site owner hasn't set up yet. Pick another model for now.`,
+        { retryable: false }
+      );
+    }
+    return null; // the endpoint carries its own token
+  }
+  if (model.openrouterId) {
+    if (!OPENROUTER_KEY) {
+      return errorJson(
+        503,
+        `${model.name} runs through OpenRouter, which the site owner hasn't set up yet. Pick another model for now.`,
+        { retryable: false }
+      );
+    }
+    return null; // OpenRouter carries its own key
+  }
+  if (!HF_TOKEN) {
+    return errorJson(
+      500,
+      "The server is missing its Hugging Face token, so cloud models can't run. The site owner needs to configure HF_TOKEN."
+    );
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -614,13 +772,6 @@ Deno.serve(async (req) => {
 
     const extractMatch = path.match(/^\/models\/([^/]+)\/extract$/);
     if (req.method === "POST" && extractMatch) {
-      if (!HF_TOKEN) {
-        return errorJson(
-          500,
-          "The server is missing its Hugging Face token, so cloud models can't run. The site owner needs to configure HF_TOKEN."
-        );
-      }
-
       const id = decodeURIComponent(extractMatch[1]);
       const model = MODELS.find((m) => m.id === id);
       if (!model) {
@@ -629,6 +780,8 @@ Deno.serve(async (req) => {
           `"${id}" isn't a known cloud model. Refresh the page to load the current model list.`
         );
       }
+      const blocked = cloudModelGuard(model);
+      if (blocked) return blocked;
 
       let body: { transcript?: string; inputType?: string };
       try {
@@ -720,13 +873,6 @@ Deno.serve(async (req) => {
     // the client parses and renders it.
     const noteMatch = path.match(/^\/models\/([^/]+)\/note$/);
     if (req.method === "POST" && noteMatch) {
-      if (!HF_TOKEN) {
-        return errorJson(
-          500,
-          "The server is missing its Hugging Face token, so cloud models can't run. The site owner needs to configure HF_TOKEN."
-        );
-      }
-
       const id = decodeURIComponent(noteMatch[1]);
       const model = MODELS.find((m) => m.id === id);
       if (!model) {
@@ -735,6 +881,8 @@ Deno.serve(async (req) => {
           `"${id}" isn't a known cloud model. Refresh the page to load the current model list.`
         );
       }
+      const blocked = cloudModelGuard(model);
+      if (blocked) return blocked;
 
       let body: { transcript?: string };
       try {

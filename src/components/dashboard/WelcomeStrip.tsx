@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 function greetingFor(hour: number): string {
   if (hour < 5) return "Up late";
@@ -20,20 +20,20 @@ export function WelcomeStrip({
   modelsTotal,
   extractionsToday,
 }: WelcomeStripProps) {
-  const [greeting, setGreeting] = useState<string>("Welcome");
-
-  useEffect(() => {
-    setGreeting(greetingFor(new Date().getHours()));
-  }, []);
+  // Time-of-day text can't match the prerendered HTML, so compute it once on
+  // the client and let React keep whatever the server guessed until hydration.
+  const [greeting] = useState<string>(() => greetingFor(new Date().getHours()));
 
   return (
     <section className="flex flex-col gap-1.5">
-      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Dashboard
-      </p>
-      <h1 className="text-[26px] font-semibold leading-tight tracking-tight text-foreground sm:text-[28px]">
+      {/* The page header already says "Dashboard" — this is the human line.
+          <p>, not <h1>: PageContainer owns the page's single h1. */}
+      <p
+        suppressHydrationWarning
+        className="text-[26px] font-semibold leading-tight tracking-tight text-foreground sm:text-[28px]"
+      >
         {greeting}.
-      </h1>
+      </p>
       <p className="max-w-2xl text-[14px] leading-relaxed text-muted-foreground">
         NeoScribe turns clinical conversations into structured findings —
         complaints, diagnoses, medications and more — and lets you compare how

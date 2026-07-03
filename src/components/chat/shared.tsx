@@ -77,7 +77,7 @@ export function RuntimeBadge({
 
 /** Status line for a model, including on-device detail like "Downloading…". */
 export function statusLabel(model: Model): string {
-  if (model.runtime === "device" && model.statusDetail) return model.statusDetail;
+  if (model.statusDetail) return model.statusDetail;
   return STATUS_META[model.status].label;
 }
 

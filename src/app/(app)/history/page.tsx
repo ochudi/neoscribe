@@ -157,10 +157,25 @@ function downloadBlob(content: string, filename: string, mime: string) {
 }
 
 function LoadingSkeleton() {
+  // Mirrors the real layout (filter row + table) so nothing jumps on load.
   return (
     <div className="flex flex-col gap-4">
-      <div className="h-24 w-full animate-pulse rounded-md bg-muted/40" />
-      <div className="h-72 w-full animate-pulse rounded-md bg-muted/40" />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="h-9 w-40 animate-pulse rounded-md bg-muted" />
+        <div className="h-9 w-32 animate-pulse rounded-md bg-muted" />
+        <div className="h-9 w-52 animate-pulse rounded-md bg-muted" />
+      </div>
+      <div className="overflow-hidden rounded-lg border border-border bg-background">
+        <div className="h-9 border-b border-border bg-muted/30" />
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="border-b border-border px-4 py-3 last:border-b-0"
+          >
+            <div className="h-4 w-full max-w-lg animate-pulse rounded bg-muted" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -168,7 +183,7 @@ function LoadingSkeleton() {
 function EmptyState() {
   return (
     <div className="flex items-center justify-center py-16">
-      <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-md border border-border bg-background p-8 text-center">
+      <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-lg border border-border bg-background p-8 text-center">
         <Clock className="h-5 w-5 text-muted-foreground" />
         <p className="text-[14px] text-foreground">No runs yet.</p>
         <p className="text-[12px] text-muted-foreground">
@@ -186,7 +201,7 @@ function EmptyState() {
 function LoadErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="flex items-center justify-center py-16">
-      <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-md border border-status-offline/50 bg-status-offline/5 p-8 text-center">
+      <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-lg border border-status-offline/50 bg-status-offline/5 p-8 text-center">
         <p className="text-[14px] text-foreground">Couldn&apos;t load your history.</p>
         <p className="text-[12px] text-muted-foreground">{message}</p>
         <Button size="sm" variant="outline" onClick={onRetry}>
@@ -200,7 +215,7 @@ function LoadErrorState({ message, onRetry }: { message: string; onRetry: () => 
 function NoFilterMatch({ onClear }: { onClear: () => void }) {
   return (
     <div className="flex items-center justify-center py-12">
-      <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-md border border-border bg-background p-6 text-center">
+      <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-lg border border-border bg-background p-6 text-center">
         <p className="text-[14px] text-foreground">
           No runs match these filters.
         </p>

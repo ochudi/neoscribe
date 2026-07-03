@@ -144,7 +144,7 @@ function ColumnError({
   const [showDetails, setShowDetails] = useState(false);
   return (
     <div className="px-4 py-6">
-      <div className="flex flex-col gap-3 rounded-md border border-status-offline/60 bg-status-offline/5 p-4">
+      <div className="flex flex-col gap-3 rounded-lg border border-status-offline/60 bg-status-offline/5 p-4">
         <div className="flex items-center gap-2 text-status-offline">
           <CircleAlert className="h-4 w-4 shrink-0" />
           <span className="text-[13px] font-medium">This run didn&apos;t finish</span>
@@ -206,7 +206,7 @@ export function CompareColumn({
   itemAnnotations,
 }: CompareColumnProps) {
   return (
-    <div className="compare-column flex flex-col rounded-md border border-border bg-background print-break-inside-avoid">
+    <div className="compare-column flex flex-col rounded-lg border border-border bg-background print-break-inside-avoid">
       <ColumnHeader model={model} extraction={extraction} />
 
       <div className="p-3">

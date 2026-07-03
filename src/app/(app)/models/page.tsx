@@ -22,7 +22,7 @@ const RUNTIME_FILTERS: { value: RuntimeFilter; label: string }[] = [
 
 function ModelCardSkeleton() {
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-border bg-background p-4">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-4">
       <div className="flex items-center justify-between">
         <div className="h-4 w-40 animate-pulse rounded bg-muted" />
         <div className="h-4 w-10 animate-pulse rounded bg-muted" />
@@ -90,16 +90,17 @@ function ModelsPageContent() {
     >
       <div className="sticky top-0 z-10 -mx-4 -mt-5 mb-6 border-b border-border bg-background px-4 py-3 sm:-mx-6 sm:-mt-6 sm:px-6 lg:-mx-8 lg:px-8">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1 rounded-md border border-border p-0.5">
+          {/* Styled to match the shadcn Tabs used on Scribe/Chat/Compare. */}
+          <div className="flex items-center gap-0.5 rounded-md bg-muted p-0.5">
             {RUNTIME_FILTERS.map((f) => (
               <button
                 key={f.value}
                 type="button"
                 onClick={() => setRuntime(f.value)}
                 className={cn(
-                  "h-7 rounded px-2.5 text-[13px] transition-colors",
+                  "h-7 rounded-sm px-2.5 text-[13px] font-medium transition-colors",
                   runtime === f.value
-                    ? "bg-muted text-foreground"
+                    ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -125,7 +126,7 @@ function ModelsPageContent() {
       </div>
 
       {cloudError && runtime !== "device" ? (
-        <div className="mb-4 rounded-md border border-status-loading/40 bg-status-loading/5 px-4 py-3 text-[13px] text-foreground">
+        <div className="mb-4 rounded-lg border border-status-loading/40 bg-status-loading/5 px-4 py-3 text-[13px] text-foreground">
           The cloud model catalog couldn&apos;t be reached, so only on-device
           models are listed. They work fully offline once downloaded.
         </div>
@@ -139,7 +140,7 @@ function ModelsPageContent() {
         </div>
       ) : visible.length === 0 ? (
         <div className="flex items-center justify-center py-16">
-          <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-md border border-border bg-background p-8 text-center">
+          <div className="flex w-full max-w-md flex-col items-center gap-3 rounded-lg border border-border bg-background p-8 text-center">
             <p className="text-[14px] text-foreground">
               No models match this filter.
             </p>
