@@ -35,7 +35,7 @@ function DownloadProgress({ modelId }: { modelId: string }) {
     <div className="flex flex-col gap-1">
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full bg-foreground/70 transition-[width]"
+          className="h-full bg-foreground/70 motion-safe:transition-[width]"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -77,7 +77,7 @@ export function ModelCard({ model }: { model: Model }) {
   };
 
   return (
-    <div className="flex flex-col rounded-lg border border-border bg-background transition-colors hover:border-foreground/15">
+    <div className="flex h-full flex-col rounded-lg border border-border bg-background transition-colors hover:border-foreground/25">
       <div className="flex items-start justify-between gap-3 px-4 pt-4">
         <h3 className="text-[16px] font-semibold leading-tight text-foreground">
           {model.name}
@@ -104,19 +104,38 @@ export function ModelCard({ model }: { model: Model }) {
         {model.description}
       </p>
 
-      <div className="flex flex-col gap-2 px-4 pb-3 text-[12px] text-muted-foreground">
+      <div className="mt-auto flex flex-col gap-2 px-4 pb-3 text-[12px] text-muted-foreground">
         {isDevice ? (
           <span className="font-mono text-[11px]">
-            {model.downloadMb ? `${formatMb(model.downloadMb)} download` : ""}
-            {model.minRamGb ? ` · needs ~${model.minRamGb} GB RAM` : ""}
-            {" · runs in your browser"}
+            {model.downloadMb ? (
+              <>
+                <span className="text-foreground">
+                  {formatMb(model.downloadMb)}
+                </span>{" "}
+                download ·{" "}
+              </>
+            ) : null}
+            {model.minRamGb ? (
+              <>
+                needs ~
+                <span className="text-foreground">{model.minRamGb} GB</span>{" "}
+                RAM ·{" "}
+              </>
+            ) : null}
+            runs in your browser
           </span>
         ) : (
           <span className="font-mono text-[11px]">
-            {model.typicalLatencyS
-              ? `Typically ~${model.typicalLatencyS}s per extraction`
-              : ""}
-            {" · hosted via Hugging Face"}
+            {model.typicalLatencyS ? (
+              <>
+                Typically ~
+                <span className="text-foreground">
+                  {model.typicalLatencyS}s
+                </span>{" "}
+                per extraction ·{" "}
+              </>
+            ) : null}
+            hosted via Hugging Face
           </span>
         )}
         {isDevice && runtime?.status === "downloading" ? (

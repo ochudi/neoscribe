@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { cn } from "@/lib/utils";
+
 /**
  * A full-width ECG trace that draws itself the first time it scrolls into
  * view, with one green pulse at the QRS spike. Pure SVG + CSS transitions.
  * Reduced motion renders it fully drawn and still.
  */
-export function EcgDivider() {
+export function EcgDivider({ className }: { className?: string }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [drawn, setDrawn] = useState(false);
   const [still, setStill] = useState(false);
@@ -38,7 +40,11 @@ export function EcgDivider() {
     "M0,40 H240 q6,0 9,-6 t9,6 H320 l14,-28 14,52 12,-24 h60 q10,0 14,-8 t14,8 H800";
 
   return (
-    <div ref={ref} aria-hidden className="relative mx-auto w-full max-w-6xl px-5 sm:px-8">
+    <div
+      ref={ref}
+      aria-hidden
+      className={cn("relative mx-auto w-full max-w-6xl px-5 sm:px-8", className)}
+    >
       <svg
         viewBox="0 0 800 80"
         className="h-14 w-full sm:h-20"

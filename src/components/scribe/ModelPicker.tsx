@@ -38,7 +38,7 @@ export function ModelPicker({
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="min-w-0 max-w-full justify-between gap-2"
+          className="h-11 w-full min-w-0 max-w-full justify-between gap-2 sm:h-9"
         >
           <span className="flex min-w-0 items-center gap-2">
             {selected ? <StatusDot status={selected.status} /> : null}
@@ -58,7 +58,7 @@ export function ModelPicker({
         ).map(([label, items]) =>
           items.length === 0 ? null : (
             <div key={label}>
-              <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 {label}
               </DropdownMenuLabel>
               {items.map((m) => (

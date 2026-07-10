@@ -27,19 +27,18 @@ const description =
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "NeoScribe · Plural Health",
+    default: "NeoScribe · AI clinical scribe",
     template: "%s · NeoScribe",
   },
   description,
   applicationName: "NeoScribe",
-  authors: [{ name: "Plural Health" }],
-  creator: "Plural Health",
-  publisher: "Plural Health",
+  authors: [{ name: "NeoScribe" }],
+  creator: "NeoScribe",
+  publisher: "NeoScribe",
   keywords: [
     "clinical NLP",
     "medical extraction",
     "AI scribe",
-    "Plural Health",
     "NeoScribe",
     "on-device AI",
     "WebGPU",
@@ -51,14 +50,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "NeoScribe",
-    title: "NeoScribe · Plural Health",
+    title: "NeoScribe · AI clinical scribe",
     description,
     url: siteUrl,
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NeoScribe · Plural Health",
+    title: "NeoScribe · AI clinical scribe",
     description,
   },
   robots: {
@@ -77,7 +76,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
   width: "device-width",
   initialScale: 1,
 };

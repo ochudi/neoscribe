@@ -10,8 +10,8 @@
  *   SUPABASE_SERVICE_ROLE_KEY="<service-role-key>" \
  *   node scripts/seed-users.mjs
  *
- * Credentials can be overridden with env vars (ADMIN_EMAIL, ADMIN_PASSWORD,
- * DEMO_EMAIL, DEMO_PASSWORD); the defaults below match what we agreed on.
+ * Set ADMIN_EMAIL / ADMIN_PASSWORD / DEMO_EMAIL / DEMO_PASSWORD in the
+ * environment; the admin password has no default on purpose.
  * Re-running is safe: an existing user is updated in place, not duplicated.
  */
 
@@ -25,11 +25,18 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
   process.exit(1);
 }
 
+if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+  console.error(
+    "Set ADMIN_EMAIL and ADMIN_PASSWORD in the environment (no defaults)."
+  );
+  process.exit(1);
+}
+
 const USERS = [
   {
-    email: process.env.ADMIN_EMAIL ?? "ofoma.chudi@gmail.com",
-    password: process.env.ADMIN_PASSWORD ?? "chudi1",
-    user_metadata: { full_name: "Chudi Ofoma", role: "admin" },
+    email: process.env.ADMIN_EMAIL,
+    password: process.env.ADMIN_PASSWORD,
+    user_metadata: { full_name: "NeoScribe Admin", role: "admin" },
   },
   {
     email: process.env.DEMO_EMAIL ?? "chudi.sandbox@gmail.com",

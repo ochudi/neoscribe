@@ -236,10 +236,10 @@ function ModelChip({
       <button
         type="button"
         onClick={onRemove}
-        className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="-my-1 ml-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         aria-label={`Remove ${model.name}`}
       >
-        <X className="h-3 w-3" />
+        <X className="h-3.5 w-3.5" />
       </button>
     </div>
   );
@@ -291,10 +291,15 @@ function ComparePageContent() {
       }
       setSelectedIds(seedIds.slice(0, MAX_MODELS));
     } else {
+      // Prefer online cloud models; fall back to anything usable (e.g.
+      // on-device models) so the page never opens with an empty selection.
       const online = models.filter(
         (m) => m.runtime === "cloud" && m.status === "online"
       );
-      setSelectedIds(online.slice(0, 2).map((m) => m.id));
+      const usable = models.filter(
+        (m) => m.status !== "offline" && !online.includes(m)
+      );
+      setSelectedIds([...online, ...usable].slice(0, 2).map((m) => m.id));
     }
     setSeeded(true);
   }, [seeded, models, modelsLoading, searchParams]);
@@ -469,7 +474,7 @@ function ComparePageContent() {
       <div className="flex flex-col gap-6">
         {/* Model selection */}
         <section className="flex flex-col gap-3 print:hidden">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             Models to compare ({selectedIds.length}/{MAX_MODELS})
           </p>
           <div className="flex flex-wrap items-center gap-2">
@@ -522,7 +527,12 @@ function ComparePageContent() {
             placeholder={PLACEHOLDERS[inputType]}
           />
           <div className="flex flex-wrap items-center gap-3">
-            <Button size="sm" onClick={handleRunAll} disabled={!canRun}>
+            <Button
+              size="sm"
+              onClick={handleRunAll}
+              disabled={!canRun}
+              className="h-11 px-5 sm:h-9 sm:px-3"
+            >
               <Play className="h-3.5 w-3.5" />
               Run on all models
             </Button>
@@ -563,26 +573,36 @@ function ComparePageContent() {
             Add at least {MIN_MODELS} models to start a comparison.
           </div>
         ) : (
-          <div
-            className={cn(
-              "grid grid-cols-1 gap-4",
-              selectedModels.length === 2 ? "lg:grid-cols-2" : "lg:grid-cols-3"
-            )}
-          >
-            {selectedModels.map((m) => (
-              <CompareColumn
-                key={m.id}
-                model={m}
-                extraction={results[m.id] ?? null}
-                loading={!!loadingMap[m.id]}
-                error={errors[m.id]?.message ?? null}
-                errorDetails={errors[m.id]?.details}
-                onRetry={() => handleRetry(m)}
-                highlightDiffs={highlightDiffs}
-                itemAnnotations={diff.itemAnnotations[m.id]}
-                categoryAnnotations={diff.categoryAnnotations[m.id]}
-              />
-            ))}
+          <div className="flex flex-col gap-2">
+            {/* Below lg the columns stay side-by-side in a scroll-snap strip —
+                comparing stacked columns defeats the point of the page. */}
+            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground lg:hidden print:hidden">
+              {selectedModels.length} columns — swipe sideways
+            </p>
+            <div
+              className={cn(
+                "grid snap-x snap-mandatory grid-flow-col gap-4 overflow-x-auto pb-2",
+                "auto-cols-[minmax(0,88%)] sm:auto-cols-[minmax(0,58%)]",
+                "lg:snap-none lg:grid-flow-row lg:auto-cols-auto lg:overflow-x-visible lg:pb-0",
+                "print:grid-flow-row print:grid-cols-1 print:overflow-visible print:pb-0",
+                selectedModels.length === 2 ? "lg:grid-cols-2" : "lg:grid-cols-3"
+              )}
+            >
+              {selectedModels.map((m) => (
+                <CompareColumn
+                  key={m.id}
+                  model={m}
+                  extraction={results[m.id] ?? null}
+                  loading={!!loadingMap[m.id]}
+                  error={errors[m.id]?.message ?? null}
+                  errorDetails={errors[m.id]?.details}
+                  onRetry={() => handleRetry(m)}
+                  highlightDiffs={highlightDiffs}
+                  itemAnnotations={diff.itemAnnotations[m.id]}
+                  categoryAnnotations={diff.categoryAnnotations[m.id]}
+                />
+              ))}
+            </div>
           </div>
         )}
 

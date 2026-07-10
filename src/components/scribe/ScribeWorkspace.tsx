@@ -48,6 +48,9 @@ import type { RunInputType } from "@/lib/api/types";
 const PLACEHOLDER =
   "Paste a clinician–patient conversation or a rough note here, or load a sample above.\n\nExample:\nPatient: I've had this cough for about three days, bringing up green phlegm.\nClinician: Any fever? O/E your chest has scattered wheezes…";
 
+/** Panels own the viewport on desktop — header + page chrome is ~15rem. */
+const PANEL_MIN_H = "lg:min-h-[calc(100dvh-15rem)]";
+
 function LoadingTimer() {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -56,8 +59,23 @@ function LoadingTimer() {
     return () => clearInterval(id);
   }, []);
   return (
-    <span className="font-mono text-[12px] text-muted-foreground">
+    <span className="font-mono text-[12px] tabular-nums text-muted-foreground">
       {elapsed.toFixed(1)}s
+    </span>
+  );
+}
+
+/** Status dot with an expanding ring — the "this instrument is live" signal. */
+function LiveDot({ className }: { className?: string }) {
+  return (
+    <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+      <span
+        className={cn(
+          "absolute inset-0 rounded-full motion-safe:animate-pulse-ring",
+          className
+        )}
+      />
+      <span className={cn("relative inline-flex h-2 w-2 rounded-full", className)} />
     </span>
   );
 }
@@ -65,7 +83,7 @@ function LoadingTimer() {
 function ShimmerBar({ className }: { className?: string }) {
   return (
     <div className={cn("h-3 w-full overflow-hidden rounded bg-muted", className)}>
-      <div className="h-full w-1/3 animate-shimmer bg-gradient-to-r from-transparent via-foreground/10 to-transparent" />
+      <div className="h-full w-1/3 bg-gradient-to-r from-transparent via-foreground/10 to-transparent motion-safe:animate-shimmer" />
     </div>
   );
 }
@@ -73,16 +91,27 @@ function ShimmerBar({ className }: { className?: string }) {
 function CloudLoading({ modelName }: { modelName: string }) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          <LiveDot className="bg-status-loading" />
           {modelName} is writing the note…
         </span>
         <LoadingTimer />
       </div>
-      <ShimmerBar />
-      <ShimmerBar className="w-5/6" />
-      <ShimmerBar className="w-2/3" />
-      <ShimmerBar className="w-3/4" />
+      {/* Skeleton shaped like the document it becomes. */}
+      <div className="flex flex-col gap-5 rounded-md border border-border bg-card p-5 sm:p-6">
+        <ShimmerBar className="h-4 w-1/3" />
+        <div className="flex flex-col gap-2.5">
+          <ShimmerBar />
+          <ShimmerBar className="w-5/6" />
+          <ShimmerBar className="w-2/3" />
+        </div>
+        <ShimmerBar className="h-4 w-1/4" />
+        <div className="flex flex-col gap-2.5">
+          <ShimmerBar className="w-3/4" />
+          <ShimmerBar className="w-1/2" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -102,8 +131,9 @@ function DevicePreparing({
       : null;
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          <LiveDot className="bg-status-loading" />
           {runtime?.status === "downloading"
             ? `Downloading ${modelName}…`
             : `Preparing ${modelName} on this device…`}
@@ -118,7 +148,7 @@ function DevicePreparing({
               style={{ width: `${pct}%` }}
             />
           </div>
-          <p className="font-mono text-[12px] text-muted-foreground">
+          <p className="font-mono text-[12px] tabular-nums text-muted-foreground">
             {formatMb(progress.loadedMb)} of {formatMb(progress.totalMb)} ({pct}%)
             — downloads once, then it&apos;s cached
           </p>
@@ -148,18 +178,24 @@ function DeviceStreaming({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [liveText]);
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+        <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          <LiveDot className="bg-status-loading" />
           {modelName} — writing on this device
         </span>
         <div className="flex items-center gap-3">
           {liveTps ? (
-            <span className="font-mono text-[12px] text-muted-foreground">
-              {liveTps.toFixed(1)} tokens/s
+            <span className="font-mono text-[12px] tabular-nums text-muted-foreground">
+              {liveTps.toFixed(1)} tok/s
             </span>
           ) : null}
-          <Button size="sm" variant="outline" onClick={onStop}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onStop}
+            className="h-11 sm:h-8"
+          >
             <Square className="h-3 w-3" />
             Stop
           </Button>
@@ -167,11 +203,14 @@ function DeviceStreaming({
       </div>
       <div
         ref={scrollRef}
-        className="max-h-80 overflow-auto rounded-md border border-border bg-muted/30 p-3"
+        className="max-h-80 min-h-40 flex-1 overflow-auto rounded-md border border-border bg-muted/30 p-3 lg:max-h-none"
       >
         <pre className="whitespace-pre-wrap break-words font-mono text-[12px] leading-relaxed text-foreground">
           {liveText || "…"}
-          <span className="animate-pulse">▌</span>
+          <span
+            aria-hidden="true"
+            className="ml-px inline-block h-[13px] w-[7px] translate-y-[2px] bg-foreground/80 motion-safe:animate-caret"
+          />
         </pre>
       </div>
       <p className="text-[11px] text-muted-foreground">
@@ -205,7 +244,12 @@ function OutputError({
       <p className="text-[13px] leading-relaxed text-foreground">{message}</p>
       <div className="flex flex-wrap items-center gap-2">
         {retryable ? (
-          <Button size="sm" variant="outline" onClick={onRetry}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onRetry}
+            className="h-11 sm:h-9"
+          >
             <RotateCw className="h-3.5 w-3.5" />
             Try again
           </Button>
@@ -215,6 +259,7 @@ function OutputError({
             size="sm"
             variant="ghost"
             onClick={() => setShowDetails((v) => !v)}
+            className="h-11 sm:h-9"
           >
             {showDetails ? "Hide" : "Show"} technical details
           </Button>
@@ -231,18 +276,27 @@ function OutputError({
 
 function NotePanelEmpty({ deviceSelected }: { deviceSelected: boolean }) {
   return (
-    <div className="flex h-full min-h-64 flex-col items-center justify-center gap-2 text-center">
+    <div className="flex min-h-64 flex-1 flex-col items-center justify-center gap-4 text-center">
       <FileText className="h-8 w-8 text-muted-foreground/50" />
-      <p className="max-w-sm text-[13px] text-muted-foreground">
-        A structured clinical note will appear here. Paste a transcript, pick a
-        model, then press Generate.
-      </p>
-      {deviceSelected ? (
-        <p className="text-[12px] text-muted-foreground/80">
-          This model runs in your browser — the transcript never leaves this
-          device.
+      {/* Idle trace — the instrument is on, waiting for input. */}
+      <div
+        className="relative h-px w-44 overflow-hidden bg-border"
+        aria-hidden="true"
+      >
+        <span className="absolute top-0 h-px w-12 bg-status-online/70 motion-safe:animate-sweep" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <p className="max-w-sm text-[13px] text-muted-foreground">
+          A structured clinical note will appear here. Paste a transcript, pick
+          a model, then press Generate.
         </p>
-      ) : null}
+        {deviceSelected ? (
+          <p className="text-[12px] text-muted-foreground/80">
+            This model runs in your browser — the transcript never leaves this
+            device.
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -410,33 +464,32 @@ export function ScribeWorkspace({ initialModelId }: { initialModelId?: string })
   const deviceStreaming = isDevice && isLoading && liveText.length > 0;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+    <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] xl:gap-5">
       {/* Transcript / input */}
-      <section className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3 sm:p-4 print:hidden">
-        <RecorderPanel
-          onTranscript={handleRecordedTranscript}
-          disabled={isLoading}
-        />
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Tabs
-            value={inputType}
-            onValueChange={(v) => setInputType(v as RunInputType)}
-          >
-            <TabsList>
-              <TabsTrigger value="transcript">Transcript</TabsTrigger>
-              <TabsTrigger value="structured_note">Rough note</TabsTrigger>
-            </TabsList>
-          </Tabs>
+      <section
+        className={cn(
+          "flex flex-col overflow-hidden rounded-lg border border-border bg-background print:hidden",
+          PANEL_MIN_H
+        )}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 border-b border-border py-1.5 pl-4 pr-1.5 sm:pl-5">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            Consultation input
+          </h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="ghost" className="text-muted-foreground">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-11 text-muted-foreground sm:h-8"
+              >
                 <BookOpen className="h-3.5 w-3.5" />
                 Load a sample
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 Example inputs
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -452,66 +505,105 @@ export function ScribeWorkspace({ initialModelId }: { initialModelId?: string })
           </DropdownMenu>
         </div>
 
-        <InputEditor
-          value={transcript}
-          onChange={(v) => {
-            setTranscript(v);
-            setSource("pasted");
-          }}
-          minHeight={300}
-          placeholder={PLACEHOLDER}
-        />
-
-        <div className="flex flex-col gap-2 border-t border-border pt-3">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            Model
-          </span>
-          <ModelPicker
-            models={models}
-            selectedId={selectedModelId}
-            onSelect={setSelectedModelId}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
+          <RecorderPanel
+            onTranscript={handleRecordedTranscript}
             disabled={isLoading}
           />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" onClick={handleGenerate} disabled={!canGenerate}>
-              <Sparkles className="h-3.5 w-3.5" />
-              Generate note
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={clearTranscript}
-              disabled={!transcript || isLoading}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Clear
-            </Button>
-            <span className="ml-auto hidden font-mono text-[11px] text-muted-foreground sm:inline">
-              ⌘↵ to generate
-            </span>
+          <Tabs
+            value={inputType}
+            onValueChange={(v) => setInputType(v as RunInputType)}
+          >
+            <TabsList>
+              <TabsTrigger value="transcript">Transcript</TabsTrigger>
+              <TabsTrigger value="structured_note">Rough note</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Editor absorbs the panel's spare height on tall viewports. */}
+          <div className="flex min-h-0 flex-1 flex-col [&>div]:flex-1">
+            <InputEditor
+              value={transcript}
+              onChange={(v) => {
+                setTranscript(v);
+                setSource("pasted");
+              }}
+              minHeight={280}
+              placeholder={PLACEHOLDER}
+            />
           </div>
-          {selectedModel && !modelUsable ? (
-            <p className="rounded-md border border-status-offline/40 bg-status-offline/5 px-3 py-2 text-[12px] text-foreground">
-              {selectedModel.statusDetail ??
-                `${selectedModel.name} is currently unavailable — pick another model.`}
-            </p>
-          ) : null}
+
+          <div className="flex flex-col gap-2 border-t border-border pt-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Model
+            </span>
+            <ModelPicker
+              models={models}
+              selectedId={selectedModelId}
+              onSelect={setSelectedModelId}
+              disabled={isLoading}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                className="h-11 flex-1 sm:h-9 sm:flex-none sm:px-4"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Generate note
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={clearTranscript}
+                disabled={!transcript || isLoading}
+                className="h-11 sm:h-9"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Clear
+              </Button>
+              <span className="ml-auto hidden font-mono text-[11px] text-muted-foreground sm:inline">
+                ⌘↵ to generate
+              </span>
+            </div>
+            {selectedModel && !modelUsable ? (
+              <p className="rounded-md border border-status-offline/40 bg-status-offline/5 px-3 py-2 text-[12px] text-foreground">
+                {selectedModel.statusDetail ??
+                  `${selectedModel.name} is currently unavailable — pick another model.`}
+              </p>
+            ) : null}
+          </div>
         </div>
       </section>
 
       {/* Note output */}
-      <section className="flex min-h-64 flex-col gap-3 rounded-lg border border-border bg-background p-4 sm:p-6">
-        <div className="flex items-center justify-between gap-2 print:hidden">
-          <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+      <section
+        className={cn(
+          "flex min-h-72 flex-col rounded-lg border border-border bg-background print:min-h-0 print:border-none",
+          PANEL_MIN_H
+        )}
+      >
+        <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-2 gap-y-1.5 border-b border-border py-1.5 pl-4 pr-1.5 sm:pl-5 print:hidden">
+          <h2 className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            {isLoading ? (
+              <LiveDot className="bg-status-loading" />
+            ) : note ? (
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-status-online"
+                aria-hidden="true"
+              />
+            ) : null}
             Clinical note
-          </span>
+          </h2>
           {note && !isLoading ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <Button
                 size="sm"
                 variant={savedId ? "ghost" : "default"}
                 onClick={() => void handleSave()}
                 disabled={saving || !!savedId}
+                className="h-11 sm:h-8"
               >
                 {saving ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -522,7 +614,12 @@ export function ScribeWorkspace({ initialModelId }: { initialModelId?: string })
                 )}
                 {savedId ? "Saved" : "Save"}
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => void copyNote()}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void copyNote()}
+                className="h-11 sm:h-8"
+              >
                 {copied ? (
                   <Check className="h-3.5 w-3.5 text-status-online" />
                 ) : (
@@ -535,29 +632,37 @@ export function ScribeWorkspace({ initialModelId }: { initialModelId?: string })
           ) : null}
         </div>
 
-        {deviceStreaming && selectedModel ? (
-          <DeviceStreaming
-            modelName={selectedModel.name}
-            liveText={liveText}
-            liveTps={liveTps}
-            onStop={interrupt}
-          />
-        ) : deviceBusy && selectedModel ? (
-          <DevicePreparing modelId={selectedModel.id} modelName={selectedModel.name} />
-        ) : isLoading && selectedModel ? (
-          <CloudLoading modelName={selectedModel.name} />
-        ) : error ? (
-          <OutputError
-            message={error}
-            details={errorDetails}
-            retryable={errorRetryable}
-            onRetry={() => void execute()}
-          />
-        ) : note ? (
-          <NoteDocument note={note} />
-        ) : (
-          <NotePanelEmpty deviceSelected={!!isDevice} />
-        )}
+        <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-5 print:p-0">
+          {deviceStreaming && selectedModel ? (
+            <DeviceStreaming
+              modelName={selectedModel.name}
+              liveText={liveText}
+              liveTps={liveTps}
+              onStop={interrupt}
+            />
+          ) : deviceBusy && selectedModel ? (
+            <DevicePreparing
+              modelId={selectedModel.id}
+              modelName={selectedModel.name}
+            />
+          ) : isLoading && selectedModel ? (
+            <CloudLoading modelName={selectedModel.name} />
+          ) : error ? (
+            <OutputError
+              message={error}
+              details={errorDetails}
+              retryable={errorRetryable}
+              onRetry={() => void execute()}
+            />
+          ) : note ? (
+            /* The finished note reads as a document page, not a panel. */
+            <div className="flex-1 rounded-md border border-border bg-card px-4 py-6 shadow-sm motion-safe:animate-fade-up sm:px-8 sm:py-8 print:rounded-none print:border-none print:bg-transparent print:p-0 print:shadow-none">
+              <NoteDocument note={note} />
+            </div>
+          ) : (
+            <NotePanelEmpty deviceSelected={!!isDevice} />
+          )}
+        </div>
       </section>
 
       <LocalModelGate

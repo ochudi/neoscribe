@@ -86,6 +86,7 @@ function SignupContent() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="h-11"
               placeholder="you@clinic.com"
             />
           </div>
@@ -98,10 +99,11 @@ function SignupContent() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="h-11"
               placeholder="At least 6 characters"
             />
           </div>
-          <Button type="submit" disabled={busy} className="mt-1 h-10">
+          <Button type="submit" disabled={busy} className="mt-1 h-11">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Create account
           </Button>

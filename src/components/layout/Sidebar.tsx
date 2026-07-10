@@ -57,11 +57,11 @@ export function NavList({ onNavigate, size = "compact" }: NavListProps) {
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "group relative flex items-center gap-2.5 rounded-md px-3 transition-colors",
+              "group relative flex items-center gap-2.5 rounded-md px-3 ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               heightClass,
               fontClass,
               active
-                ? "bg-muted text-foreground"
+                ? "bg-muted font-medium text-foreground"
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
             )}
           >
@@ -69,8 +69,8 @@ export function NavList({ onNavigate, size = "compact" }: NavListProps) {
             <span
               aria-hidden
               className={cn(
-                "absolute left-0 top-1/2 w-[2.5px] -translate-y-1/2 rounded-full bg-foreground transition-all duration-300",
-                active ? "h-4 opacity-100" : "h-1.5 opacity-0"
+                "absolute left-0 top-1/2 w-[2.5px] -translate-y-1/2 rounded-full bg-foreground motion-safe:transition-all motion-safe:duration-300",
+                active ? "h-5 opacity-100" : "h-1.5 opacity-0"
               )}
             />
             <Icon

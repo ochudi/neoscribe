@@ -38,7 +38,12 @@ export function NoteExportMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" variant="outline" disabled={disabled}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={disabled}
+          className="h-11 sm:h-8"
+        >
           <Download className="h-3.5 w-3.5" />
           Download
           <ChevronDown className="h-3.5 w-3.5" />

@@ -56,7 +56,7 @@ function SpecRow({
   value: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
+    <div className="flex items-center justify-between gap-3 py-2">
       <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
         <Icon className="h-3.5 w-3.5" />
         {label}
@@ -112,12 +112,15 @@ export function LocalModelGate({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            On-device · pre-flight check
+          </p>
           <DialogTitle>Run {model.name} on this device</DialogTitle>
           <DialogDescription>{def.description}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          <div className="rounded-md border border-border bg-muted/30 px-3 py-1.5">
+          <div className="divide-y divide-border/60 rounded-md border border-border bg-muted/30 px-3 py-1">
             <SpecRow
               icon={Download}
               label="One-time download"

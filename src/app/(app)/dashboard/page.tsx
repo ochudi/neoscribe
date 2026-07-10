@@ -24,11 +24,13 @@ function StatsSkeleton() {
       {Array.from({ length: 4 }).map((_, i) => (
         <div
           key={i}
-          className="flex flex-col gap-2 rounded-lg border border-border bg-background p-4"
+          className="flex flex-col gap-2.5 rounded-lg border border-border bg-background p-4 sm:p-5"
         >
-          <div className="h-3 w-20 animate-pulse rounded bg-muted" />
-          <div className="h-8 w-16 animate-pulse rounded bg-muted" />
-          <div className="h-3 w-28 animate-pulse rounded bg-muted" />
+          <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+          <div className="h-[30px] w-16 animate-pulse rounded bg-muted sm:h-[34px]" />
+          <div className="mt-auto border-t border-border/60 pt-2.5">
+            <div className="h-3.5 w-28 animate-pulse rounded bg-muted" />
+          </div>
         </div>
       ))}
     </div>
@@ -39,14 +41,35 @@ function RunsSkeleton() {
   return (
     <div className="flex flex-col gap-3">
       <div className="h-3 w-24 animate-pulse rounded bg-muted" />
-      <div className="overflow-hidden rounded-lg border border-border bg-background">
-        <div className="h-8 border-b border-border bg-muted/30" />
+
+      {/* Mobile: row-cards, matching RecentRuns' phone layout. */}
+      <div className="flex flex-col gap-2 md:hidden">
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="border-b border-border px-4 py-3 last:border-b-0"
+            className="flex flex-col gap-2.5 rounded-lg border border-border bg-background p-3"
           >
-            <div className="h-4 w-full max-w-md animate-pulse rounded bg-muted" />
+            <div className="flex items-center justify-between gap-2">
+              <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+              <div className="h-3 w-12 animate-pulse rounded bg-muted" />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="h-4 w-40 animate-pulse rounded bg-muted" />
+              <div className="h-3.5 w-10 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: table shell, matching RecentRuns' header + row heights. */}
+      <div className="hidden overflow-hidden rounded-lg border border-border bg-background md:block">
+        <div className="h-[33px] border-b border-border bg-muted/30" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="border-b border-border px-4 py-2.5 last:border-b-0"
+          >
+            <div className="h-5 w-full max-w-md animate-pulse rounded bg-muted" />
           </div>
         ))}
       </div>
@@ -72,7 +95,7 @@ export default function DashboardPage() {
       title="Dashboard"
       description="What's running, what just ran, and where to start."
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 lg:gap-10">
         {statsLoading || !stats ? (
           <StripSkeleton />
         ) : (

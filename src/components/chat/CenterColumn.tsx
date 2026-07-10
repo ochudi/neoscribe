@@ -405,7 +405,12 @@ export function CenterColumn() {
               />
 
               <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" onClick={handleRun} disabled={!canRun}>
+                <Button
+                  size="sm"
+                  onClick={handleRun}
+                  disabled={!canRun}
+                  className="h-11 px-5 sm:h-9 sm:px-3"
+                >
                   <Play className="h-3.5 w-3.5" />
                   Run
                 </Button>
@@ -414,6 +419,7 @@ export function CenterColumn() {
                   variant="ghost"
                   onClick={clearInput}
                   disabled={!inputContent || isLoading}
+                  className="h-11 sm:h-9"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Clear
@@ -421,6 +427,7 @@ export function CenterColumn() {
                 <Button
                   size="sm"
                   variant="outline"
+                  className="h-11 sm:h-9"
                   onClick={() =>
                     router.push(
                       selectedModelId
@@ -449,8 +456,8 @@ export function CenterColumn() {
         </section>
 
         <section className="flex min-h-0 flex-col">
-          <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-3 sm:px-6">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          <div className="flex items-center justify-between gap-2 border-b border-border bg-background px-3 py-3 sm:px-6">
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               Findings
             </span>
             <span className="flex min-w-0 items-center gap-2">

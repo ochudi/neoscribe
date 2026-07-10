@@ -8,24 +8,33 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-const FEATURES: Array<{ icon: LucideIcon; title: string; body: string }> = [
+const FEATURES: Array<{
+  icon: LucideIcon;
+  tag: string;
+  title: string;
+  body: string;
+}> = [
   {
     icon: MonitorSmartphone,
+    tag: "Privacy",
     title: "On-device by default",
     body: "Whisper and small language models run in the browser over WebGPU or WASM. The recording and the transcript stay on the machine unless you reach for a cloud model.",
   },
   {
     icon: Columns3,
+    tag: "Evaluation",
     title: "Compare, don't guess",
     body: "Run the same consult through two or three models at once and see who caught the diagnosis, the dose, and the follow-up.",
   },
   {
     icon: ShieldCheck,
+    tag: "Reliability",
     title: "Honest about limits",
     body: "When a model is too heavy for your device or a provider is having a bad day, NeoScribe tells you in plain English instead of spinning forever.",
   },
   {
     icon: FileText,
+    tag: "History",
     title: "Every run kept",
     body: "Transcripts and notes are saved and searchable, so last Tuesday's clinic is one click away when the paperwork catches up with you.",
   },
@@ -49,7 +58,7 @@ export function FeatureGrid() {
         <div
           key={f.title}
           onPointerMove={onMove}
-          className="group relative flex gap-4 overflow-hidden rounded-xl border border-border bg-background p-6 transition-colors hover:border-foreground/25"
+          className="group relative flex gap-4 overflow-hidden rounded-lg border border-border bg-background p-6 transition-colors hover:border-foreground/25 hover:bg-muted/30"
         >
           {/* spotlight layer */}
           <div
@@ -64,6 +73,9 @@ export function FeatureGrid() {
             <f.icon className="h-5 w-5" />
           </span>
           <div className="flex flex-col gap-1.5">
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              {f.tag}
+            </span>
             <h3 className="text-[15px] font-semibold text-foreground">
               {f.title}
             </h3>

@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { Menu, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
+import { BrandMark } from "@/components/brand/BrandMark";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { useModels } from "@/lib/hooks/useModels";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition-colors after:absolute after:-inset-1 after:content-[''] hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
@@ -64,7 +64,7 @@ function StatusPill() {
       <span className="relative flex h-1.5 w-1.5">
         <span
           className={cn(
-            "absolute inline-flex h-full w-full animate-ping rounded-full opacity-40",
+            "absolute inline-flex h-full w-full rounded-full opacity-40 motion-safe:animate-ping",
             dotClass
           )}
         />
@@ -91,26 +91,19 @@ export function Header({ onMenuClick }: HeaderProps) {
         <button
           type="button"
           onClick={onMenuClick}
-          className="-ml-1 flex h-9 w-9 items-center justify-center rounded-md text-foreground transition-colors hover:bg-muted lg:hidden"
+          className="relative -ml-1 flex h-9 w-9 items-center justify-center rounded-md text-foreground ring-offset-background transition-colors after:absolute after:-inset-1 after:content-[''] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:hidden"
           aria-label="Open navigation"
         >
           <Menu className="h-4 w-4" />
         </button>
 
-        <Image
-          src="/plural-icon.png"
-          alt="Plural Health"
-          width={24}
-          height={24}
-          className="rounded-sm"
-          priority
-        />
+        <BrandMark size={24} />
         <span aria-hidden="true" className="hidden h-5 w-px bg-border sm:block" />
         <div className="flex flex-col leading-none">
           <span className="text-[15px] font-medium text-foreground sm:text-[16px]">
             NeoScribe
           </span>
-          <span className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground sm:mt-1">
+          <span className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground sm:mt-1">
             Clinical AI playground
           </span>
         </div>

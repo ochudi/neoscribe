@@ -93,14 +93,14 @@ function Step({
   children: React.ReactNode;
 }) {
   return (
-    <div className="group flex flex-col gap-3 rounded-lg border border-border bg-background p-6 transition-all duration-300 hover:-translate-y-1 hover:border-foreground/25 hover:shadow-[0_20px_40px_-24px_rgba(0,0,0,0.35)]">
+    <div className="group flex flex-col gap-3 rounded-lg border border-border bg-background p-6 transition-colors hover:border-foreground/25 hover:bg-muted/30">
       <div className="flex items-center justify-between">
-        <span className="flex h-9 w-9 items-center justify-center rounded-md border border-border transition-colors group-hover:border-foreground/30">
+        <span className="flex h-10 w-10 items-center justify-center rounded-md border border-border transition-colors group-hover:border-foreground/30">
           <Icon className="h-4 w-4" />
         </span>
         <span className="font-mono text-[11px] text-muted-foreground">{n}</span>
       </div>
-      <h3 className="text-[16px] font-semibold tracking-tight text-foreground">
+      <h3 className="text-[15px] font-semibold tracking-tight text-foreground">
         {title}
       </h3>
       <p className="text-[14px] leading-relaxed text-muted-foreground">
@@ -123,7 +123,7 @@ export default function LandingPage() {
         <div className="mx-auto grid w-full max-w-6xl gap-12 px-5 pb-16 pt-14 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pb-24 lg:pt-20">
           <div className="flex flex-col justify-center gap-6">
             <Reveal>
-              <Eyebrow>Plural Health · clinical documentation</Eyebrow>
+              <Eyebrow>NeoScribe · clinical documentation</Eyebrow>
             </Reveal>
             <Reveal delay={60}>
               <h1 className="text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-[56px]">
@@ -182,13 +182,13 @@ export default function LandingPage() {
       <EcgDivider />
 
       {/* Shorthand decoder */}
-      <section className="pb-16 pt-8 lg:pb-20">
+      <section className="pb-16 pt-10 lg:pb-24">
         <ShorthandTicker />
       </section>
 
       {/* Runtimes */}
       <section className="border-t border-border bg-muted/20 [content-visibility:auto] [contain-intrinsic-size:auto_640px]">
-        <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-20">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
           <Reveal className="flex flex-col gap-3">
             <Eyebrow>Two ways to run it</Eyebrow>
             <h2 className="max-w-2xl text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
@@ -196,8 +196,8 @@ export default function LandingPage() {
               don&apos;t.
             </h2>
           </Reveal>
-          <div className="mt-10 grid gap-4 md:grid-cols-2">
-            <Reveal className="group flex flex-col gap-4 rounded-xl border border-border bg-background p-7 transition-all duration-300 hover:-translate-y-1 hover:border-foreground/25 hover:shadow-[0_24px_50px_-28px_rgba(0,0,0,0.4)]">
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:mt-12">
+            <Reveal className="group flex flex-col gap-4 rounded-lg border border-border bg-background p-6 transition-colors hover:border-foreground/25 hover:bg-muted/30">
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-md border border-border transition-colors group-hover:border-foreground/30">
                   <Cloud className="h-5 w-5" />
@@ -217,7 +217,7 @@ export default function LandingPage() {
             </Reveal>
             <Reveal
               delay={100}
-              className="group flex flex-col gap-4 rounded-xl border border-border bg-background p-7 transition-all duration-300 hover:-translate-y-1 hover:border-foreground/25 hover:shadow-[0_24px_50px_-28px_rgba(0,0,0,0.4)]"
+              className="group flex flex-col gap-4 rounded-lg border border-border bg-background p-6 transition-colors hover:border-foreground/25 hover:bg-muted/30"
             >
               <div className="flex items-center gap-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-md border border-border transition-colors group-hover:border-foreground/30">
@@ -241,14 +241,14 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-20 [content-visibility:auto] [contain-intrinsic-size:auto_560px]">
+      <section className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-24 [content-visibility:auto] [contain-intrinsic-size:auto_560px]">
         <Reveal className="flex flex-col gap-3">
           <Eyebrow>How it works</Eyebrow>
           <h2 className="max-w-2xl text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Three steps, and none of them is typing it up later.
           </h2>
         </Reveal>
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
+        <div className="mt-10 grid gap-4 md:grid-cols-3 lg:mt-12">
           <Reveal delay={0}>
             <Step n="01" icon={Mic} title="Capture">
               Record the consultation or paste a transcript. With live
@@ -271,24 +271,30 @@ export default function LandingPage() {
       </section>
 
       {/* By the numbers */}
-      <section className="mx-auto w-full max-w-6xl px-5 pb-16 sm:px-8 lg:pb-20">
-        <Reveal>
+      <section className="mx-auto w-full max-w-6xl px-5 pb-16 sm:px-8 lg:pb-24">
+        <Reveal className="mx-auto w-full max-w-4xl">
           <StatStrip />
         </Reveal>
       </section>
 
       {/* Features */}
-      <section className="border-t border-border bg-muted/20 [content-visibility:auto] [contain-intrinsic-size:auto_520px]">
-        <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-20">
-          <Reveal>
+      <section className="border-t border-border bg-muted/20 [content-visibility:auto] [contain-intrinsic-size:auto_560px]">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-24">
+          <Reveal className="flex flex-col gap-3">
+            <Eyebrow>The details</Eyebrow>
+            <h2 className="max-w-2xl text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              Opinionated where it counts, quiet everywhere else.
+            </h2>
+          </Reveal>
+          <Reveal delay={100} className="mt-10 lg:mt-12">
             <FeatureGrid />
           </Reveal>
         </div>
       </section>
 
       {/* Privacy CTA */}
-      <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 [content-visibility:auto] [contain-intrinsic-size:auto_480px]">
-        <Reveal className="relative flex flex-col items-center gap-6 overflow-hidden rounded-2xl border border-border bg-background px-6 py-14 text-center">
+      <section className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 lg:py-24 [content-visibility:auto] [contain-intrinsic-size:auto_480px]">
+        <Reveal className="relative mx-auto flex w-full max-w-4xl flex-col items-center gap-6 overflow-hidden rounded-lg border border-border bg-background px-6 py-14 text-center sm:py-16">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(60%_60%_at_50%_0%,black,transparent)]"
@@ -298,7 +304,7 @@ export default function LandingPage() {
               backgroundSize: "20px 20px",
             }}
           />
-          <span className="flex h-12 w-12 items-center justify-center rounded-lg border border-border">
+          <span className="flex h-12 w-12 items-center justify-center rounded-md border border-border">
             <ShieldCheck className="h-6 w-6" />
           </span>
           <h2 className="max-w-2xl text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
@@ -328,30 +334,40 @@ export default function LandingPage() {
               NeoScribe
             </span>
             <span className="text-[12px] text-muted-foreground">
-              A Plural Health project.
+              A portfolio demo, not a medical device.
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground">
-            <Link href="/dashboard" className="hover:text-foreground">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[13px] text-muted-foreground">
+            <Link
+              href="/dashboard"
+              className="inline-flex min-h-11 items-center transition-colors hover:text-foreground sm:min-h-0"
+            >
               Dashboard
             </Link>
-            <Link href="/scribe" className="hover:text-foreground">
+            <Link
+              href="/scribe"
+              className="inline-flex min-h-11 items-center transition-colors hover:text-foreground sm:min-h-0"
+            >
               Scribe
             </Link>
-            <Link href="/compare" className="hover:text-foreground">
+            <Link
+              href="/compare"
+              className="inline-flex min-h-11 items-center transition-colors hover:text-foreground sm:min-h-0"
+            >
               Compare
             </Link>
-            <Link href="/models" className="hover:text-foreground">
+            <Link
+              href="/models"
+              className="inline-flex min-h-11 items-center transition-colors hover:text-foreground sm:min-h-0"
+            >
               Models
             </Link>
-            <a
-              href="https://www.pluralhealth.ai"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-foreground"
+            <Link
+              href="/history"
+              className="inline-flex min-h-11 items-center transition-colors hover:text-foreground sm:min-h-0"
             >
-              Plural Health
-            </a>
+              History
+            </Link>
           </div>
           <p className="font-mono text-[11px] text-muted-foreground">
             Hugging Face · Supabase · Vercel

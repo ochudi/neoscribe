@@ -90,15 +90,21 @@ function ModelsPageContent() {
     >
       <div className="sticky top-0 z-10 -mx-4 -mt-5 mb-6 border-b border-border bg-background px-4 py-3 sm:-mx-6 sm:-mt-6 sm:px-6 lg:-mx-8 lg:px-8">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Styled to match the shadcn Tabs used on Scribe/Chat/Compare. */}
-          <div className="flex items-center gap-0.5 rounded-md bg-muted p-0.5">
+          {/* Styled to match the shadcn Tabs used on Scribe/Chat/Compare.
+              Segments stay ≥44px tall on touch layouts; compact at lg+. */}
+          <div
+            role="group"
+            aria-label="Filter by runtime"
+            className="flex items-center gap-0.5 rounded-md bg-muted p-0.5"
+          >
             {RUNTIME_FILTERS.map((f) => (
               <button
                 key={f.value}
                 type="button"
                 onClick={() => setRuntime(f.value)}
+                aria-pressed={runtime === f.value}
                 className={cn(
-                  "h-7 rounded-sm px-2.5 text-[13px] font-medium transition-colors",
+                  "h-11 rounded-sm px-4 text-[13px] font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:h-7 lg:px-2.5",
                   runtime === f.value
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
@@ -115,7 +121,7 @@ function ModelsPageContent() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name or provider…"
-              className="h-9 pl-8"
+              className="h-11 pl-8 lg:h-9"
             />
           </div>
 
@@ -133,8 +139,8 @@ function ModelsPageContent() {
       ) : null}
 
       {isLoading && models.length === 0 ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
             <ModelCardSkeleton key={i} />
           ))}
         </div>
@@ -150,7 +156,7 @@ function ModelsPageContent() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {visible.map((m) => (
             <ModelCard key={m.id} model={m} />
           ))}

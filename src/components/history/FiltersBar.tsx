@@ -64,25 +64,25 @@ export function FiltersBar({ filters, onChange, modelOptions }: FiltersBarProps)
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-sm">
+        <div className="relative w-full sm:max-w-sm sm:flex-1">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={filters.search}
             onChange={(e) => update({ search: e.target.value })}
             placeholder="Search input text…"
-            className="h-9 pl-8"
+            className="h-11 pl-8 sm:h-9"
           />
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="outline" className="gap-1.5">
+            <Button size="sm" variant="outline" className="h-11 gap-1.5 sm:h-9">
               Models ({filters.modelIds.length === 0 ? "All" : filters.modelIds.length})
               <ChevronDown className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               Filter by model
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -117,10 +117,10 @@ export function FiltersBar({ filters, onChange, modelOptions }: FiltersBarProps)
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 sm:flex sm:w-auto">
           <Label
             htmlFor="date-from"
-            className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
+            className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground"
           >
             From
           </Label>
@@ -129,11 +129,11 @@ export function FiltersBar({ filters, onChange, modelOptions }: FiltersBarProps)
             type="date"
             value={filters.dateFrom}
             onChange={(e) => update({ dateFrom: e.target.value })}
-            className="h-9 w-[140px]"
+            className="h-11 w-full sm:h-9 sm:w-[140px]"
           />
           <Label
             htmlFor="date-to"
-            className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground"
+            className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground"
           >
             To
           </Label>
@@ -142,7 +142,7 @@ export function FiltersBar({ filters, onChange, modelOptions }: FiltersBarProps)
             type="date"
             value={filters.dateTo}
             onChange={(e) => update({ dateTo: e.target.value })}
-            className="h-9 w-[140px]"
+            className="h-11 w-full sm:h-9 sm:w-[140px]"
           />
         </div>
 
@@ -151,7 +151,7 @@ export function FiltersBar({ filters, onChange, modelOptions }: FiltersBarProps)
           onClick={() => onChange(DEFAULT_FILTERS)}
           disabled={filtersAreDefault(filters)}
           className={cn(
-            "ml-auto text-[12px] underline-offset-2 hover:underline",
+            "ml-auto min-h-11 text-[12px] underline-offset-2 hover:underline sm:min-h-0",
             filtersAreDefault(filters)
               ? "cursor-not-allowed text-muted-foreground/60"
               : "text-muted-foreground hover:text-foreground"
@@ -162,9 +162,9 @@ export function FiltersBar({ filters, onChange, modelOptions }: FiltersBarProps)
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
-        <div className="flex min-w-[260px] flex-col gap-1">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="font-mono uppercase tracking-wider text-muted-foreground">
+        <div className="flex w-full max-w-md flex-col gap-1">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-[11px]">
+            <span className="font-mono uppercase tracking-[0.18em] text-muted-foreground">
               Share of findings with a code
             </span>
             <span className="font-mono text-muted-foreground">
@@ -183,7 +183,7 @@ export function FiltersBar({ filters, onChange, modelOptions }: FiltersBarProps)
                 update({ minRate: v, maxRate: Math.max(v, filters.maxRate) });
               }}
               aria-label="Minimum coded share"
-              className="h-1.5 w-full"
+              className="h-6 w-full cursor-pointer accent-foreground sm:h-4"
             />
             <input
               type="range"
@@ -196,7 +196,7 @@ export function FiltersBar({ filters, onChange, modelOptions }: FiltersBarProps)
                 update({ maxRate: v, minRate: Math.min(v, filters.minRate) });
               }}
               aria-label="Maximum coded share"
-              className="h-1.5 w-full"
+              className="h-6 w-full cursor-pointer accent-foreground sm:h-4"
             />
           </div>
         </div>

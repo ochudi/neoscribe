@@ -25,7 +25,7 @@ import {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+    <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
       {children}
     </p>
   );
@@ -253,7 +253,7 @@ export function MetadataRail() {
   }
 
   return (
-    <aside className="hidden w-80 shrink-0 flex-col border-l border-border bg-background lg:flex">
+    <aside className="hidden w-72 shrink-0 flex-col border-l border-border bg-background lg:flex xl:w-80">
       <div className="flex items-center justify-between px-4 pt-4">
         <SectionLabel>Run details</SectionLabel>
         <button

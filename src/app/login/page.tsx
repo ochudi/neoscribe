@@ -81,6 +81,7 @@ function LoginContent() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="h-11"
               placeholder="you@clinic.com"
             />
           </div>
@@ -93,10 +94,11 @@ function LoginContent() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="h-11"
               placeholder="••••••••"
             />
           </div>
-          <Button type="submit" disabled={busy !== null} className="mt-1 h-10">
+          <Button type="submit" disabled={busy !== null} className="mt-1 h-11">
             {busy === "form" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Sign in
           </Button>
@@ -114,7 +116,7 @@ function LoginContent() {
             variant="outline"
             disabled={busy !== null}
             onClick={demo}
-            className="h-10"
+            className="h-11"
           >
             {busy === "demo" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Explore the demo account

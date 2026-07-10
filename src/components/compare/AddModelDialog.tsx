@@ -78,7 +78,7 @@ export function AddModelDialog({
             ).map(([key, label, items]) =>
               items.length === 0 ? null : (
                 <div key={key} className="flex flex-col gap-1.5">
-                  <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                     {label}
                   </p>
                   {items.map((m) => {
@@ -89,10 +89,10 @@ export function AddModelDialog({
                         type="button"
                         onClick={() => setPendingId(m.id)}
                         className={cn(
-                          "flex items-center gap-2 rounded-md border px-3 py-2 text-left text-[13px] transition-colors",
+                          "flex min-h-11 items-center gap-2 rounded-md border px-3 py-2.5 text-left text-[13px] transition-colors",
                           active
                             ? "border-foreground bg-muted text-foreground"
-                            : "border-border text-foreground hover:bg-muted/50"
+                            : "border-border text-foreground hover:border-foreground/25 hover:bg-muted/30"
                         )}
                       >
                         <StatusDot status={m.status} />
@@ -116,10 +116,18 @@ export function AddModelDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            className="h-11 sm:h-10"
+          >
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!pendingId}>
+          <Button
+            onClick={handleConfirm}
+            disabled={!pendingId}
+            className="h-11 sm:h-10"
+          >
             Add to comparison
           </Button>
         </DialogFooter>

@@ -67,7 +67,7 @@ export function RecentRuns({ runs }: RecentRunsProps) {
 
   return (
     <section className="flex flex-col gap-3">
-      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         Recent runs
       </p>
 
@@ -81,7 +81,7 @@ export function RecentRuns({ runs }: RecentRunsProps) {
               <li key={run.id}>
                 <Link
                   href={`/history?run=${encodeURIComponent(run.id)}`}
-                  className="flex flex-col gap-2 rounded-lg border border-border bg-background p-3 transition-colors hover:border-foreground/25 hover:bg-muted/30"
+                  className="flex flex-col gap-2.5 rounded-lg border border-border bg-background p-3 ring-offset-background transition-colors hover:border-foreground/25 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-[14px] font-medium text-foreground">
@@ -92,8 +92,11 @@ export function RecentRuns({ runs }: RecentRunsProps) {
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <CodedMiniBar coded={run.codedCount} total={run.itemCount} />
-                    <span className="font-mono text-[12px] text-foreground">
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <RuntimeBadge runtime={run.runtime} className="shrink-0" />
+                      <CodedMiniBar coded={run.codedCount} total={run.itemCount} />
+                    </span>
+                    <span className="shrink-0 font-mono text-[12px] text-foreground">
                       {(run.durationMs / 1000).toFixed(1)}s
                     </span>
                   </div>
@@ -104,11 +107,11 @@ export function RecentRuns({ runs }: RecentRunsProps) {
 
           {/* Desktop table */}
           <div className="hidden overflow-hidden rounded-lg border border-border bg-background md:block">
-            <div className="grid grid-cols-[88px_minmax(0,1fr)_110px_80px_150px] items-center gap-3 border-b border-border bg-muted/30 px-4 py-2 text-[11px] uppercase tracking-wider text-muted-foreground">
-              <span className="font-mono">When</span>
+            <div className="grid grid-cols-[88px_minmax(0,1fr)_110px_80px_150px] items-center gap-3 border-b border-border bg-muted/30 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              <span>When</span>
               <span>Model</span>
               <span>Where</span>
-              <span className="font-mono">Time</span>
+              <span>Time</span>
               <span>Items coded</span>
             </div>
             <ul className="divide-y divide-border">
@@ -116,7 +119,7 @@ export function RecentRuns({ runs }: RecentRunsProps) {
                 <li key={run.id}>
                   <Link
                     href={`/history?run=${encodeURIComponent(run.id)}`}
-                    className="grid grid-cols-[88px_minmax(0,1fr)_110px_80px_150px] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/30"
+                    className="grid grid-cols-[88px_minmax(0,1fr)_110px_80px_150px] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:bg-muted/30 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   >
                     <span className="font-mono text-[12px] text-muted-foreground">
                       {relativeFromNow(run.savedAt, nowMs)}
@@ -137,10 +140,10 @@ export function RecentRuns({ runs }: RecentRunsProps) {
 
           <Link
             href="/history"
-            className="group inline-flex items-center gap-1 self-start text-[13px] text-muted-foreground transition-colors hover:text-foreground"
+            className="group inline-flex items-center gap-1 self-start rounded-sm text-[13px] text-muted-foreground ring-offset-background transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             View all in History
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            <ArrowRight className="h-3.5 w-3.5 transition-transform motion-safe:group-hover:translate-x-0.5" />
           </Link>
         </>
       )}

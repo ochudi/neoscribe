@@ -30,40 +30,41 @@ export function InputEditor({
   );
 
   return (
-    <div
-      className="relative flex w-full overflow-hidden rounded-md border border-border bg-background"
-      style={{ minHeight }}
-    >
-      <div
-        aria-hidden="true"
-        className="select-none overflow-hidden border-r border-border bg-muted/30 py-3"
-        style={{ width: 40 }}
-      >
+    <div className="flex w-full flex-col overflow-hidden rounded-md border border-border bg-background">
+      <div className="flex min-h-0 flex-1" style={{ minHeight }}>
         <div
-          className="flex flex-col items-end pr-2 font-mono text-[12px] leading-[20px] text-muted-foreground"
-          style={{ transform: `translateY(${-scrollY}px)` }}
+          aria-hidden="true"
+          className="select-none overflow-hidden border-r border-border bg-muted/30 py-3"
+          style={{ width: 40 }}
         >
-          {numbers.map((n) => (
-            <div key={n}>{n}</div>
-          ))}
+          <div
+            className="flex flex-col items-end pr-2 font-mono text-[12px] leading-[20px] text-muted-foreground"
+            style={{ transform: `translateY(${-scrollY}px)` }}
+          >
+            {numbers.map((n) => (
+              <div key={n}>{n}</div>
+            ))}
+          </div>
         </div>
+
+        <textarea
+          ref={taRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onScroll={(e) => setScrollY(e.currentTarget.scrollTop)}
+          placeholder={placeholder}
+          spellCheck={false}
+          className={cn(
+            "flex-1 resize-none overflow-auto bg-transparent px-3 py-3 font-mono text-[13px] leading-[20px] text-foreground placeholder:text-muted-foreground/70",
+            "focus:outline-none"
+          )}
+        />
       </div>
 
-      <textarea
-        ref={taRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onScroll={(e) => setScrollY(e.currentTarget.scrollTop)}
-        placeholder={placeholder}
-        spellCheck={false}
-        className={cn(
-          "flex-1 resize-none overflow-auto bg-transparent px-3 py-3 font-mono text-[13px] leading-[20px] text-foreground placeholder:text-muted-foreground/70",
-          "focus:outline-none"
-        )}
-      />
-
-      <div className="pointer-events-none absolute bottom-2 right-3">
-        <span className="font-mono text-[11px] text-muted-foreground">
+      {/* In-flow status strip — sits inside the editor frame, so it can never
+          collide with content below (previously an absolute overlay). */}
+      <div className="flex items-center justify-end border-t border-border bg-muted/30 px-3 py-1">
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           {value.length.toLocaleString()} chars
         </span>
       </div>

@@ -40,8 +40,15 @@ async function waitForText(text, timeout = 60_000) {
   );
 }
 
+console.log("0. Sign in with the shared demo account...");
+await page.goto(`${BASE}/login`, { waitUntil: "networkidle2" });
+await clickByText("button", "demo account");
+await page.waitForFunction(() => !location.pathname.startsWith("/login"));
+await sleep(1500);
+console.log("   OK — " + page.url());
+
 console.log("1. Dashboard loads with real stats...");
-await page.goto(BASE, { waitUntil: "networkidle2" });
+await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle2" });
 await waitForText("Cloud models");
 await waitForText("Quickstart");
 console.log("   OK");

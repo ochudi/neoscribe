@@ -25,7 +25,7 @@ export function UserMenu() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted text-[13px] font-semibold text-foreground transition-colors hover:bg-muted/70"
+          className="relative flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted text-[13px] font-semibold text-foreground ring-offset-background transition-colors after:absolute after:-inset-1 after:content-[''] hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="Account menu"
           title={email}
         >
@@ -38,7 +38,7 @@ export function UserMenu() {
             {email}
           </div>
           {role ? (
-            <div className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
               {role} account
             </div>
           ) : null}

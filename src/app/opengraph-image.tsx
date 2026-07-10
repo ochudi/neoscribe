@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "NeoScribe · Plural Health";
+export const alt = "NeoScribe · AI clinical scribe";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -24,17 +24,23 @@ export default async function Image() {
             style={{
               width: 56,
               height: 56,
-              borderRadius: 12,
+              borderRadius: 14,
               background: "#0F172A",
-              color: "#fff",
-              fontSize: 32,
-              fontWeight: 700,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            P
+            <svg width="34" height="34" viewBox="0 0 32 32">
+              <path
+                d="M10 22.5V9.5L22 22.5V9.5"
+                fill="none"
+                stroke="#fff"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
           <div
             style={{
@@ -44,7 +50,7 @@ export default async function Image() {
               textTransform: "uppercase",
             }}
           >
-            Plural Health
+            NeoScribe
           </div>
         </div>
 

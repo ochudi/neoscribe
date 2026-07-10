@@ -85,7 +85,7 @@ function terminateWorker() {
   const store = useLocalEngineStore.getState();
   if (previous) {
     store.setState(previous, {
-      status: store.downloaded[previous] ? "idle" : "idle",
+      status: "idle",
       progress: undefined,
     });
   }

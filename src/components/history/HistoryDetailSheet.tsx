@@ -57,7 +57,7 @@ export function HistoryDetailSheet({
             <ScrollArea className="flex-1">
               <div className="flex flex-col gap-6 px-6 py-5">
                 <section className="flex flex-col gap-2">
-                  <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                     Input
                   </p>
                   <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-muted/30 p-3 font-mono text-[12px] text-foreground">
@@ -70,7 +70,7 @@ export function HistoryDetailSheet({
                 </section>
 
                 <section className="flex flex-col gap-2">
-                  <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                     Findings
                   </p>
                   <ExtractionOutput extraction={entry.extraction} />
@@ -78,18 +78,20 @@ export function HistoryDetailSheet({
               </div>
             </ScrollArea>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-6 py-4">
-              <Button size="sm" variant="outline" onClick={() => onOpenInChat(entry)}>
-                <MessageSquare className="h-3.5 w-3.5" />
-                Open in Workspace
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => onCompare(entry)}>
-                <Columns3 className="h-3.5 w-3.5" />
-                Compare
+            <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-4">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="mr-auto h-11 text-status-offline hover:text-status-offline sm:h-9"
+                onClick={() => onDelete(entry)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
+                className="h-11 sm:h-9"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(
@@ -106,12 +108,21 @@ export function HistoryDetailSheet({
               </Button>
               <Button
                 size="sm"
-                variant="ghost"
-                className="text-status-offline hover:text-status-offline"
-                onClick={() => onDelete(entry)}
+                variant="outline"
+                className="h-11 sm:h-9"
+                onClick={() => onCompare(entry)}
               >
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete
+                <Columns3 className="h-3.5 w-3.5" />
+                Compare
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-11 sm:h-9"
+                onClick={() => onOpenInChat(entry)}
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                Open in Workspace
               </Button>
             </div>
           </>

@@ -1,9 +1,12 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+
 /**
  * A slow marquee of clinical shorthand decoding itself, because that is
  * literally what the product does. Duplicated list + translateX(-50%) for a
- * seamless loop; pauses on hover; sits still under reduced motion.
+ * seamless loop; pauses on hover. Under reduced motion the duplicate row is
+ * dropped and the chips wrap into a still, centered cluster instead.
  */
 const PAIRS: Array<[string, string]> = [
   ["6/52", "6 weeks"],
@@ -20,9 +23,9 @@ const PAIRS: Array<[string, string]> = [
   ["BP 120/80", "blood pressure, normal"],
 ];
 
-function Row() {
+function Row({ className }: { className?: string }) {
   return (
-    <div className="flex shrink-0 items-center gap-3 pr-3">
+    <div className={cn("flex shrink-0 items-center gap-3 pr-3", className)}>
       {PAIRS.map(([short, long]) => (
         <span
           key={short}
@@ -48,12 +51,12 @@ export function ShorthandTicker() {
         Fluent in clinical shorthand
       </p>
       <div
-        className="group flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]"
+        className="group flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)] motion-reduce:[mask-image:none]"
         aria-label="Examples of clinical shorthand NeoScribe expands"
       >
-        <div className="flex w-max motion-safe:animate-marquee motion-safe:group-hover:[animation-play-state:paused]">
-          <Row />
-          <Row />
+        <div className="flex w-max motion-safe:animate-marquee motion-safe:group-hover:[animation-play-state:paused] motion-reduce:w-full">
+          <Row className="motion-reduce:w-full motion-reduce:shrink motion-reduce:flex-wrap motion-reduce:justify-center motion-reduce:gap-y-3 motion-reduce:px-5 motion-reduce:pr-5" />
+          <Row className="motion-reduce:hidden" />
         </div>
       </div>
     </div>

@@ -54,7 +54,7 @@ function MetricBlock({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
         {title}
       </p>
       <div className="flex flex-col gap-1.5">{children}</div>
@@ -128,8 +128,18 @@ export function CompareSummary({ models, results }: CompareSummaryProps) {
   if (metrics.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-border bg-background px-4 py-4">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div className="rounded-lg border border-border bg-background">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-foreground">
+          Summary
+        </span>
+        <span className="font-mono text-[11px] text-muted-foreground">
+          {allReady
+            ? `${metrics.length} models compared`
+            : "waiting for results"}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-6 px-4 py-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricBlock title="Coding rate">
           {metrics.map((m) => (
             <BarRow
@@ -173,11 +183,11 @@ export function CompareSummary({ models, results }: CompareSummaryProps) {
 
       <div
         className={cn(
-          "mt-5 flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-border pt-4 text-[12px]",
+          "flex flex-wrap items-center gap-x-6 gap-y-1.5 border-t border-border px-4 py-3.5 text-[12px]",
           !allReady && "text-muted-foreground"
         )}
       >
-        <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           Leaders
         </span>
         {allReady && fastest && broadest && bestCoder ? (

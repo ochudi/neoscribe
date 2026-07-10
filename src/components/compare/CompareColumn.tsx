@@ -206,7 +206,7 @@ export function CompareColumn({
   itemAnnotations,
 }: CompareColumnProps) {
   return (
-    <div className="compare-column flex flex-col rounded-lg border border-border bg-background print-break-inside-avoid">
+    <div className="compare-column flex min-w-0 snap-start flex-col rounded-lg border border-border bg-background print-break-inside-avoid">
       <ColumnHeader model={model} extraction={extraction} />
 
       <div className="p-3">

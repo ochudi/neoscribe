@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
+import { BrandMark } from "@/components/brand/BrandMark";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -58,14 +58,7 @@ export function ErrorShell({
           href="/"
           className="group flex items-center gap-3 transition-opacity hover:opacity-80"
         >
-          <Image
-            src="/plural-icon.png"
-            alt="Plural Health"
-            width={28}
-            height={28}
-            className="rounded-sm"
-            priority
-          />
+          <BrandMark size={28} />
           <span aria-hidden="true" className="h-5 w-px bg-border" />
           <span className="text-[14px] font-medium text-foreground">
             NeoScribe

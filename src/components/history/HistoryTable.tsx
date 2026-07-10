@@ -78,7 +78,7 @@ function SortHeader({
       type="button"
       onClick={() => onSort(column)}
       className={cn(
-        "flex items-center gap-1 text-left font-mono text-[11px] uppercase tracking-wider hover:text-foreground",
+        "flex items-center gap-1 text-left font-mono text-[11px] uppercase tracking-[0.18em] hover:text-foreground",
         isActive ? "text-foreground" : "text-muted-foreground"
       )}
     >
@@ -143,7 +143,7 @@ function MobileCardList({
             <Button
               size="sm"
               variant="ghost"
-              className="flex-1 px-2"
+              className="h-11 flex-1 px-2"
               onClick={() => onOpen(entry)}
             >
               View
@@ -151,7 +151,7 @@ function MobileCardList({
             <Button
               size="sm"
               variant="ghost"
-              className="flex-1 px-2"
+              className="h-11 flex-1 px-2"
               onClick={() => onRerun(entry)}
             >
               Re-run
@@ -159,7 +159,7 @@ function MobileCardList({
             <Button
               size="sm"
               variant="ghost"
-              className="flex-1 px-2 text-status-offline hover:text-status-offline"
+              className="h-11 flex-1 px-2 text-status-offline hover:text-status-offline"
               onClick={() => onDelete(entry)}
             >
               Delete
@@ -188,79 +188,85 @@ export function HistoryTable({
         onDelete={onDelete}
       />
 
+      {/* The column grid needs ~880px; below that it scrolls inside this
+          container — never at page level. */}
       <div className="hidden overflow-hidden rounded-lg border border-border bg-background md:block">
-        <div
-          className={cn(
-            "grid items-center gap-3 border-b border-border bg-muted/30 px-4 py-2",
-            GRID_COLS
-          )}
-        >
-          <SortHeader label="Saved" column="savedAt" state={sort} onSort={onSortChange} />
-          <SortHeader label="Model" column="model" state={sort} onSort={onSortChange} />
-          <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            Where
-          </span>
-          <SortHeader label="Input" column="input" state={sort} onSort={onSortChange} />
-          <SortHeader label="Time" column="duration" state={sort} onSort={onSortChange} />
-          <SortHeader label="Coded" column="codedRate" state={sort} onSort={onSortChange} />
-          <span className="text-right font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-            Actions
-          </span>
-        </div>
-
-        <ul className="divide-y divide-border">
-          {entries.map((entry) => (
-            <li
-              key={entry.id}
+        <div className="overflow-x-auto">
+          <div className="min-w-[880px]">
+            <div
               className={cn(
-                "grid cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/30",
+                "grid items-center gap-3 border-b border-border bg-muted/30 px-4 py-2",
                 GRID_COLS
               )}
-              onClick={() => onOpen(entry)}
             >
-              <span className="font-mono text-[12px] text-foreground">
-                {formatSavedAt(entry.savedAt)}
+              <SortHeader label="Saved" column="savedAt" state={sort} onSort={onSortChange} />
+              <SortHeader label="Model" column="model" state={sort} onSort={onSortChange} />
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                Where
               </span>
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="truncate text-[14px] text-foreground">
-                  {entry.modelName}
-                </span>
-                {entry.modelSizeLabel ? (
-                  <span className="shrink-0 rounded border border-border px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
-                    {entry.modelSizeLabel}
-                  </span>
-                ) : null}
-              </div>
-              <RuntimeBadge runtime={entry.runtime} className="w-fit" />
-              <span className="truncate font-mono text-[12px] text-muted-foreground">
-                {inputPreview(entry.input) || <span className="italic">(empty)</span>}
+              <SortHeader label="Input" column="input" state={sort} onSort={onSortChange} />
+              <SortHeader label="Time" column="duration" state={sort} onSort={onSortChange} />
+              <SortHeader label="Coded" column="codedRate" state={sort} onSort={onSortChange} />
+              <span className="text-right font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                Actions
               </span>
-              <span className="font-mono text-[13px] text-foreground">
-                {(entry.durationMs / 1000).toFixed(1)}s
-              </span>
-              <CodedMiniBar coded={entry.codedCount} total={entry.itemCount} />
-              <div
-                className="flex items-center justify-end gap-1"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Button size="sm" variant="ghost" className="px-2" onClick={() => onOpen(entry)}>
-                  View
-                </Button>
-                <Button size="sm" variant="ghost" className="px-2" onClick={() => onRerun(entry)}>
-                  Re-run
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="px-2 text-status-offline hover:text-status-offline"
-                  onClick={() => onDelete(entry)}
+            </div>
+
+            <ul className="divide-y divide-border">
+              {entries.map((entry) => (
+                <li
+                  key={entry.id}
+                  className={cn(
+                    "grid cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/30",
+                    GRID_COLS
+                  )}
+                  onClick={() => onOpen(entry)}
                 >
-                  Delete
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                  <span className="font-mono text-[12px] text-foreground">
+                    {formatSavedAt(entry.savedAt)}
+                  </span>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-[14px] text-foreground">
+                      {entry.modelName}
+                    </span>
+                    {entry.modelSizeLabel ? (
+                      <span className="shrink-0 rounded border border-border px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        {entry.modelSizeLabel}
+                      </span>
+                    ) : null}
+                  </div>
+                  <RuntimeBadge runtime={entry.runtime} className="w-fit" />
+                  <span className="truncate font-mono text-[12px] text-muted-foreground">
+                    {inputPreview(entry.input) || <span className="italic">(empty)</span>}
+                  </span>
+                  <span className="font-mono text-[13px] text-foreground">
+                    {(entry.durationMs / 1000).toFixed(1)}s
+                  </span>
+                  <CodedMiniBar coded={entry.codedCount} total={entry.itemCount} />
+                  <div
+                    className="flex items-center justify-end gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button size="sm" variant="ghost" className="px-2" onClick={() => onOpen(entry)}>
+                      View
+                    </Button>
+                    <Button size="sm" variant="ghost" className="px-2" onClick={() => onRerun(entry)}>
+                      Re-run
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="px-2 text-status-offline hover:text-status-offline"
+                      onClick={() => onDelete(entry)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
     </>
   );

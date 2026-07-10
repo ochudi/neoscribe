@@ -32,6 +32,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SheetTitle className="text-left text-[15px] font-medium">
               NeoScribe
             </SheetTitle>
+            <p className="text-left font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              Clinical AI playground
+            </p>
           </SheetHeader>
           <div className="flex flex-1 flex-col">
             <NavList

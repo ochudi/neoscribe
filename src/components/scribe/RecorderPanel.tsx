@@ -12,6 +12,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -97,7 +98,7 @@ export function RecorderPanel({ onTranscript, disabled }: RecorderPanelProps) {
         size="sm"
         disabled={disabled}
         onClick={() => setOpen(true)}
-        className="w-full justify-center border-dashed"
+        className="h-11 w-full justify-center border-dashed sm:h-9"
       >
         <Mic className="h-4 w-4" />
         Record consultation
@@ -105,12 +106,19 @@ export function RecorderPanel({ onTranscript, disabled }: RecorderPanelProps) {
     );
   }
 
+  const isRecording = rec.status === "recording";
+
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-3">
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-3 transition-colors",
+        isRecording && "border-status-offline/50"
+      )}
+    >
       {/* Settings row */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
             Transcriber
           </span>
           <DropdownMenu>
@@ -124,7 +132,7 @@ export function RecorderPanel({ onTranscript, disabled }: RecorderPanelProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
-              <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 On-device speech model
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -186,22 +194,37 @@ export function RecorderPanel({ onTranscript, disabled }: RecorderPanelProps) {
           ) : null}
         </div>
       ) : rec.status === "transcribing" ? (
-        <div className="flex items-center gap-2 py-3 text-[13px] text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Transcribing the full recording…
+        <div className="flex items-center gap-3 py-3">
+          <div className="flex h-4 items-end gap-[3px]" aria-hidden="true">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <span
+                key={i}
+                className="h-full w-[3px] origin-center rounded-full bg-status-loading/80 motion-safe:animate-wave"
+                style={{ animationDelay: `${i * 120}ms` }}
+              />
+            ))}
+          </div>
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            Transcribing the full recording…
+          </span>
         </div>
       ) : rec.status === "recording" ? (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 font-mono text-[12px] text-status-offline">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-offline/70" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-status-offline" />
+            <span className="flex items-baseline gap-2 text-status-offline">
+              <span className="relative flex h-2.5 w-2.5 self-center" aria-hidden="true">
+                <span className="absolute inset-0 rounded-full bg-status-offline/70 motion-safe:animate-pulse-ring" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-status-offline motion-safe:animate-pulse" />
               </span>
-              REC {mmss(rec.elapsedS)}
+              <span className="font-mono text-[11px] font-medium uppercase tracking-[0.18em]">
+                Rec
+              </span>
+              <span className="font-mono text-[14px] tabular-nums leading-none">
+                {mmss(rec.elapsedS)}
+              </span>
             </span>
             {nearLive ? (
-              <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 <Radio className="h-3 w-3" />
                 live
               </span>
@@ -237,7 +260,7 @@ export function RecorderPanel({ onTranscript, disabled }: RecorderPanelProps) {
       {/* Controls */}
       <div className="flex items-center gap-2">
         {rec.status === "recording" ? (
-          <Button size="sm" onClick={rec.stop} className="flex-1">
+          <Button size="sm" onClick={rec.stop} className="h-11 flex-1 sm:h-9">
             <Square className="h-3.5 w-3.5" />
             Stop & transcribe
           </Button>
@@ -246,7 +269,7 @@ export function RecorderPanel({ onTranscript, disabled }: RecorderPanelProps) {
             size="sm"
             onClick={rec.start}
             disabled={rec.status === "preparing" || rec.status === "transcribing"}
-            className="flex-1"
+            className="h-11 flex-1 sm:h-9"
           >
             <Mic className="h-3.5 w-3.5" />
             {rec.status === "error" ? "Try again" : "Start recording"}
@@ -260,6 +283,7 @@ export function RecorderPanel({ onTranscript, disabled }: RecorderPanelProps) {
             setOpen(false);
           }}
           disabled={rec.status === "transcribing"}
+          className="h-11 sm:h-9"
         >
           <X className="h-3.5 w-3.5" />
           Close

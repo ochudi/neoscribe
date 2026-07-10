@@ -226,7 +226,7 @@ export function HeroStage() {
 
       <div
         ref={cardRef}
-        className="relative rounded-xl border border-border bg-background shadow-[0_1px_2px_rgba(0,0,0,0.04),0_24px_60px_-28px_rgba(0,0,0,0.28)] transition-shadow will-change-transform [transform-style:preserve-3d] dark:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_28px_70px_-30px_rgba(0,0,0,0.7)]"
+        className="relative rounded-lg border border-border bg-background shadow-[0_1px_2px_rgba(0,0,0,0.04),0_24px_60px_-28px_rgba(0,0,0,0.28)] transition-shadow will-change-transform [transform-style:preserve-3d] dark:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_28px_70px_-30px_rgba(0,0,0,0.7)]"
       >
         {/* title bar */}
         <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 [transform:translateZ(30px)]">

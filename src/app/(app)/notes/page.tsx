@@ -54,13 +54,27 @@ function fmtDate(iso: string): string {
       });
 }
 
-function noteSnippet(n: SavedNote): string {
+/** Clinical content leads the card — the model is metadata, not the headline. */
+function noteTitle(n: SavedNote): string {
   return (
-    n.note.patientSummary ||
     n.note.presentingComplaints[0] ||
+    n.note.patientSummary ||
     n.note.assessment ||
-    n.transcript.slice(0, 140) ||
-    "Empty note"
+    "Clinical note"
+  );
+}
+
+function noteSnippet(n: SavedNote): string {
+  const title = noteTitle(n);
+  const candidates = [
+    n.note.patientSummary,
+    n.note.assessment,
+    n.note.history,
+    n.transcript.slice(0, 140),
+  ];
+  return (
+    candidates.find((c) => c && c.trim() && c !== title) ??
+    "Structured clinical note"
   );
 }
 
@@ -70,6 +84,7 @@ function CardSkeleton() {
       <div className="h-4 w-40 animate-pulse rounded bg-muted" />
       <div className="h-3 w-full animate-pulse rounded bg-muted" />
       <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
+      <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-muted" />
     </div>
   );
 }
@@ -116,58 +131,80 @@ export default function NotesPage() {
       title="Notes"
       description="Every clinical note you've saved — reopen, export, or clear them out."
     >
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-5xl">
         {isLoading ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {Array.from({ length: 4 }).map((_, i) => (
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
               <CardSkeleton key={i} />
             ))}
           </div>
         ) : isError ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-border py-16 text-center">
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-border px-6 py-16 text-center">
             <CircleAlert className="h-7 w-7 text-status-offline" />
             <p className="text-[14px] text-foreground">
               Couldn&apos;t load your notes.
             </p>
-            <Button size="sm" variant="outline" onClick={() => void refetch()}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void refetch()}
+              className="h-11 sm:h-9"
+            >
               <RotateCw className="h-3.5 w-3.5" />
               Try again
             </Button>
           </div>
         ) : !notes || notes.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
-            <FileText className="h-8 w-8 text-muted-foreground/50" />
-            <p className="text-[14px] text-foreground">No saved notes yet.</p>
-            <p className="max-w-sm text-[13px] text-muted-foreground">
-              Generate a clinical note in the Scribe, then hit Save to keep it
-              here across devices.
-            </p>
-            <Button asChild size="sm">
-              <Link href="/scribe">Open the Scribe</Link>
+          <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed border-border px-6 py-16 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-muted/40">
+              <Mic className="h-5 w-5 text-muted-foreground" />
+            </div>
+            {/* Idle trace — nothing recorded yet. */}
+            <div
+              className="relative h-px w-44 overflow-hidden bg-border"
+              aria-hidden="true"
+            >
+              <span className="absolute top-0 h-px w-12 bg-status-online/70 motion-safe:animate-sweep" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="text-[14px] font-medium text-foreground">
+                No notes yet
+              </p>
+              <p className="max-w-sm text-[13px] leading-relaxed text-muted-foreground">
+                Record a consultation — or paste a transcript — in the Scribe,
+                then hit Save to keep the note here across devices.
+              </p>
+            </div>
+            <Button asChild size="sm" className="h-11 sm:h-9">
+              <Link href="/scribe">
+                <Mic className="h-3.5 w-3.5" />
+                Record in the Scribe
+              </Link>
             </Button>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {notes.map((n) => {
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+            {notes.map((n, i) => {
               const itemCount = noteItemCount(n);
               return (
                 <button
                   key={n.id}
                   type="button"
                   onClick={() => setOpenId(n.id)}
-                  className="flex flex-col gap-2 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:border-foreground/25 hover:bg-muted/30"
+                  className="flex flex-col gap-2 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:border-foreground/25 hover:bg-muted/30 motion-safe:animate-fade-up"
+                  style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-[14px] font-medium text-foreground">
-                      {n.modelName}
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="line-clamp-1 min-w-0 text-[14px] font-medium leading-snug text-foreground">
+                      {noteTitle(n)}
                     </span>
-                    <RuntimeBadge runtime={n.runtime} />
+                    <RuntimeBadge runtime={n.runtime} className="shrink-0" />
                   </div>
                   <p className="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">
                     {noteSnippet(n)}
                   </p>
-                  <div className="mt-1 flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
-                    <span>{fmtDate(n.savedAt)}</span>
+                  <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2.5 font-mono text-[11px] text-muted-foreground">
+                    <span className="truncate">{n.modelName}</span>
                     <span className="inline-flex items-center gap-1">
                       {n.source === "recorded" ? (
                         <Mic className="h-3 w-3" />
@@ -177,6 +214,9 @@ export default function NotesPage() {
                       {n.source}
                     </span>
                     <span>{itemCount} items</span>
+                    <span className="ml-auto tabular-nums">
+                      {fmtDate(n.savedAt)}
+                    </span>
                   </div>
                 </button>
               );
@@ -192,27 +232,41 @@ export default function NotesPage() {
         >
           {active ? (
             <>
-              <SheetHeader className="flex flex-row flex-wrap items-center justify-between gap-2 border-b border-border p-4">
-                <SheetTitle className="text-[15px]">Saved note</SheetTitle>
-                <div className="flex items-center gap-1.5">
-                  <Button size="sm" variant="outline" onClick={() => reopen(active)}>
-                    <SquarePen className="h-3.5 w-3.5" />
-                    Reopen
-                  </Button>
-                  <NoteExportMenu note={active.note} />
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => void remove(active.id)}
-                    disabled={deleting}
-                    className="text-status-offline hover:text-status-offline"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete
-                  </Button>
+              <SheetHeader className="gap-2 space-y-0 border-b border-border p-4 text-left sm:px-6">
+                <div className="flex flex-row flex-wrap items-center justify-between gap-2">
+                  <SheetTitle className="font-mono text-[11px] font-normal uppercase tracking-[0.18em] text-muted-foreground">
+                    Saved note
+                  </SheetTitle>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => reopen(active)}
+                      className="h-11 sm:h-8"
+                    >
+                      <SquarePen className="h-3.5 w-3.5" />
+                      Reopen
+                    </Button>
+                    <NoteExportMenu note={active.note} />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => void remove(active.id)}
+                      disabled={deleting}
+                      className="h-11 text-status-offline hover:text-status-offline sm:h-8"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-row flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
+                  <span>{active.modelName}</span>
+                  <RuntimeBadge runtime={active.runtime} />
+                  <span className="tabular-nums">{fmtDate(active.savedAt)}</span>
                 </div>
               </SheetHeader>
-              <div className="flex-1 overflow-auto p-4 sm:p-6">
+              <div className="flex-1 overflow-auto p-4 sm:p-8">
                 <NoteDocument note={active.note} />
               </div>
             </>

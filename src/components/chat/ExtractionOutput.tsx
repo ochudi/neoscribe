@@ -93,7 +93,8 @@ function ItemRow({ index, item, compact, annotation }: RowProps) {
           <span className="italic text-muted-foreground">No content</span>
         )}
         {annotation?.onlyInLabel ? (
-          <span className="ml-2 inline-flex items-center rounded border border-status-loading/40 bg-status-loading/10 px-1.5 py-0.5 align-middle font-mono text-[10px] uppercase tracking-wider text-status-loading">
+          <span className="ml-2 inline-flex items-center gap-1.5 rounded-sm border border-status-loading/40 bg-status-loading/10 px-1.5 py-0.5 align-middle font-mono text-[10px] uppercase tracking-wider text-foreground">
+            <span className="h-1 w-1 shrink-0 rounded-full bg-status-loading" />
             {annotation.onlyInLabel}
           </span>
         ) : null}
@@ -102,10 +103,10 @@ function ItemRow({ index, item, compact, annotation }: RowProps) {
       <span className="flex shrink-0 items-center gap-2 pt-0.5">
         {isCoded ? (
           <span
-            className="inline-flex items-center gap-1 rounded border border-status-online/30 bg-status-online/10 px-1.5 py-0.5 font-mono text-[11px] text-status-online"
+            className="inline-flex items-center gap-1 rounded-sm border border-status-online/40 bg-status-online/10 px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-wide text-foreground"
             title="Code suggested by the model — not yet validated"
           >
-            <Check className="h-3 w-3" />
+            <Check className="h-3 w-3 shrink-0 text-status-online" />
             {item.matchedCode}
           </span>
         ) : (
@@ -119,7 +120,7 @@ function ItemRow({ index, item, compact, annotation }: RowProps) {
         <button
           type="button"
           onClick={() => copyText(itemToText(item), "Item")}
-          className="text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover/row:opacity-100"
+          className="text-muted-foreground opacity-60 transition-opacity hover:text-foreground focus-visible:opacity-100 sm:opacity-0 sm:group-hover/row:opacity-100"
           aria-label="Copy item"
         >
           <Copy className="h-3.5 w-3.5" />
@@ -183,8 +184,8 @@ function CategorySection({
             />
             <span
               className={cn(
-                "font-semibold leading-tight",
-                compact ? "text-[13px]" : "text-[14px]",
+                "truncate font-mono uppercase tracking-[0.18em] leading-tight",
+                compact ? "text-[10px]" : "text-[11px]",
                 isEmpty ? "text-muted-foreground" : "text-foreground"
               )}
             >
@@ -194,7 +195,7 @@ function CategorySection({
               className={cn(
                 "font-mono text-muted-foreground",
                 compact ? "text-[11px]" : "text-[12px]",
-                highlight && "font-bold text-foreground"
+                highlight && "font-semibold text-foreground"
               )}
             >
               ({items.length})
@@ -360,17 +361,25 @@ export function ExtractionOutput({
             filter on.
           </div>
         ) : (
-          visibleSections.map(({ category, items }) => (
-            <CategorySection
-              key={category}
-              category={category}
-              items={items}
-              expanded={!!expandedMap[category]}
-              compact={compact}
-              onToggle={() => toggle(category)}
-              categoryAnnotation={categoryAnnotations?.[category]}
-              itemAnnotations={itemAnnotations}
-            />
+          visibleSections.map(({ category, items }, i) => (
+            // Keyed on the run so each new result replays the staggered
+            // entrance; `fade-up` fills backwards, so delayed sections stay
+            // hidden until their turn. Gated by motion-safe via the utility.
+            <div
+              key={`${extraction.startedAt}-${category}`}
+              className="motion-safe:animate-fade-up"
+              style={{ animationDelay: `${Math.min(i, 7) * 55}ms` }}
+            >
+              <CategorySection
+                category={category}
+                items={items}
+                expanded={!!expandedMap[category]}
+                compact={compact}
+                onToggle={() => toggle(category)}
+                categoryAnnotation={categoryAnnotations?.[category]}
+                itemAnnotations={itemAnnotations}
+              />
+            </div>
           ))
         )}
       </div>

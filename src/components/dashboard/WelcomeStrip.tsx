@@ -38,7 +38,15 @@ export function WelcomeStrip({
         NeoScribe turns clinical conversations into structured findings —
         complaints, diagnoses, medications and more — and lets you compare how
         different AI models handle the same input.{" "}
-        <span className="text-foreground">
+        <span className="whitespace-nowrap text-foreground">
+          <span
+            aria-hidden
+            className={`mr-1.5 inline-block h-1.5 w-1.5 -translate-y-px rounded-full ${
+              modelsOnline === modelsTotal
+                ? "bg-status-online"
+                : "bg-status-loading"
+            }`}
+          />
           {modelsOnline} of {modelsTotal} cloud models online
         </span>
         {" · "}

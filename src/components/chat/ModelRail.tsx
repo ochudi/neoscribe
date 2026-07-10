@@ -45,7 +45,7 @@ import type { Model } from "@/lib/api/types";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+    <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
       {children}
     </p>
   );
@@ -302,7 +302,8 @@ export function ModelRail() {
     if (best) {
       setSelectedModelId(best.id);
     } else if (!isLoading) {
-      setSelectedModelId(models[0].id);
+      const usable = models.find((m) => m.status !== "offline") ?? models[0];
+      setSelectedModelId(usable.id);
     }
   }, [models, isLoading, selectedModelId, setSelectedModelId]);
 

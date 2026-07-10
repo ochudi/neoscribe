@@ -80,7 +80,7 @@ export function MobileChatBar() {
         <SheetTrigger asChild>
           <button
             type="button"
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-[13px] transition-colors hover:bg-muted/40"
+            className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-[13px] transition-colors hover:bg-muted/40"
           >
             {selected ? (
               <>
@@ -147,7 +147,12 @@ export function MobileChatBar() {
 
       <Sheet open={metaOpen} onOpenChange={setMetaOpen}>
         <SheetTrigger asChild>
-          <Button size="sm" variant="outline" disabled={!extraction} className="shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!extraction}
+            className="h-11 shrink-0"
+          >
             <FileText className="h-3.5 w-3.5" />
             Details
           </Button>

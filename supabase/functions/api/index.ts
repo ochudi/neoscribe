@@ -73,6 +73,16 @@ interface ModelDef {
 // non-technical users.
 const MODELS: ModelDef[] = [
   {
+    id: "gpt-oss-20b",
+    name: "GPT-OSS 20B",
+    hf_id: "openai/gpt-oss-20b",
+    provider: "OpenAI",
+    sizeLabel: "20B",
+    description:
+      "OpenAI's open-weight model. Very fast and reliable at structured extraction.",
+    typicalLatencyS: 3,
+  },
+  {
     id: "medgemma-4b",
     name: "MedGemma 4B",
     hf_id: "google/medgemma-4b-it",
@@ -104,16 +114,6 @@ const MODELS: ModelDef[] = [
       "Google's Gemma 3 at 27B through OpenRouter. Reliable and near-free (fractions of a cent per note) — the dependable online choice when a demo can't stall on a rate limit.",
     typicalLatencyS: 6,
     openrouterId: "google/gemma-3-27b-it",
-  },
-  {
-    id: "gpt-oss-20b",
-    name: "GPT-OSS 20B",
-    hf_id: "openai/gpt-oss-20b",
-    provider: "OpenAI",
-    sizeLabel: "20B",
-    description:
-      "OpenAI's open-weight model. Very fast and reliable at structured extraction.",
-    typicalLatencyS: 3,
   },
   {
     id: "llama-3.3-70b",
